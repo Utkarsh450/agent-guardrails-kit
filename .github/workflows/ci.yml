@@ -1,0 +1,133 @@
+# CI for this repository. The matrix proves the kit works with npm, pnpm and bun, on Linux and macOS.
+# Windows is an experiment: the hook commands use POSIX shell syntax and have never been checked there,
+# so those jobs are allowed to fail until someone makes them pass.
+# Actions are pinned to a commit so a moved tag cannot change what runs.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.pm }} on ${{ matrix.os }} (Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        pm: [npm, pnpm, bun]
+        node: [22]
+        experimental: [false]
+        include:
+          - os: ubuntu-latest
+            pm: pnpm
+            node: 24
+            experimental: false
+          - os: windows-latest
+            pm: npm
+            node: 22
+            experimental: true
+          - os: windows-latest
+            pm: pnpm
+            node: 22
+            experimental: true
+          - os: windows-latest
+            pm: bun
+            node: 22
+            experimental: true
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install pnpm
+        if: matrix.pm == 'pnpm'
+        run: npm install --global pnpm@11.24.0
+
+      - name: Install bun
+        if: matrix.pm == 'bun'
+        run: npm install --global bun@1.4.0
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          case "$PM" in
+            npm)  npm install --no-audit --no-fund ;;
+            pnpm) pnpm install --frozen-lockfile ;;
+            bun)  bun install ;;
+          esac
+        env:
+          PM: ${{ matrix.pm }}
+
+      - name: Type check
+        run: ${{ matrix.pm }} run typecheck
+
+      - name: Test
+        run: ${{ matrix.pm }} run test
+
+      - name: Build
+        run: ${{ matrix.pm }} run build
+
+      - name: Smoke test the built CLI in a new project
+        shell: bash
+        env:
+          RUNTIME: ${{ matrix.pm == 'bun' && 'bun' || 'node' }}
+        run: |
+          cli="$GITHUB_WORKSPACE/dist/cli.mjs"
+          project="$(mktemp -d)"
+          cd "$project"
+          git init -q
+          echo '{"name":"smoke"}' > package.json
+          "$RUNTIME" "$cli" --version
+          "$RUNTIME" "$cli" init --agents claude,cursor,codex --yes --git-config
+          "$RUNTIME" "$cli" doctor --ci
+          "$RUNTIME" "$cli" test --hooks
+
+  package:
+    name: the published package works
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Build and pack
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          mkdir -p "$RUNNER_TEMP/pack"
+          npm pack --pack-destination "$RUNNER_TEMP/pack"
+
+      - name: Install the tarball in an empty folder and use it
+        run: |
+          stranger="$(mktemp -d)"
+          cd "$stranger"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$RUNNER_TEMP"/pack/*.tgz
+          npx agent-guardrails-kit --version
+          mkdir project && cd project
+          git init -q
+          npx agent-guardrails init --agents claude --yes --git-config
+          npx agent-guardrails doctor --ci
