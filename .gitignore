@@ -9,6 +9,7 @@ dist/
 # >>> agent-guardrails:state (managed block; edit outside it)
 .agent-guardrails/audit.log
 .agent-guardrails/approval.json
+.agent-guardrails/checkpoints/
 # <<< agent-guardrails:state
 
 # >>> agent-guardrails:secrets (managed block; edit outside it)
