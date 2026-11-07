@@ -38,6 +38,9 @@ export async function runReport(ctx: CommandContext, options: ReportOptions = {}
   ui.print(`${summary.total} recorded action(s) from ${summary.first} to ${summary.last}`);
   ui.print(`  blocked: ${summary.byDecision.deny}   asked: ${summary.byDecision.ask}   allowed: ${summary.byDecision.allow}${summary.byDecision.allow === 0 ? " (allowed actions are only logged when auditAllowed is on)" : ""}`);
   ui.print(`  by agent: ${Object.entries(summary.byAgent).map(([agent, n]) => `${agent} ${n}`).join(", ")}`);
+  if (summary.watched > 0) {
+    ui.print(`  watch mode let ${summary.watched} of the asked action(s) run without asking (they are marked "watched" below).`);
+  }
 
   ui.print("\nMost common reasons");
   for (const row of summary.byRule.slice(0, 8)) {
@@ -47,7 +50,7 @@ export async function runReport(ctx: CommandContext, options: ReportOptions = {}
   if (recent.length > 0) {
     ui.print(`\nMost recent blocked or asked actions (newest first)`);
     for (const entry of recent) {
-      ui.print(`  ${entry.ts}  ${entry.agent}  ${entry.decision === "deny" ? "blocked" : "asked  "}  ${entry.rule}  ${shorten(entry.detail, 80)}`);
+      ui.print(`  ${entry.ts}  ${entry.agent}  ${entry.decision === "deny" ? "blocked" : "asked  "}  ${entry.rule}${entry.watched ? " (watched)" : ""}  ${shorten(entry.detail, 80)}`);
     }
   }
 

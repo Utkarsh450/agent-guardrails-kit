@@ -19,7 +19,14 @@ export const STACKS = ["generic", "node-ts", "python", "go", "db-heavy"] as cons
 export type Stack = (typeof STACKS)[number];
 
 /** The keys the guard itself reads. The rest of the file is for the CLI and is ignored by the guard. */
-export const GUARD_CONFIG_KEYS = ["version", "policy", "allowCommands", "gitAllow", "approvalGate", "planFile", "auditAllowed"] as const;
+export const GUARD_CONFIG_KEYS = ["version", "policy", "allowCommands", "gitAllow", "approvalGate", "planFile", "auditAllowed", "mode", "watchUntil", "checkpoints"] as const;
+
+/** enforce = the guard asks and blocks as normal. watch = "ask" decisions are logged and let through for a limited time. */
+export const MODES = ["enforce", "watch"] as const;
+export type Mode = (typeof MODES)[number];
+/** Watch mode can never last longer than this many days from now, whatever the settings file says. */
+export const WATCH_MAX_DAYS = 30;
+export const WATCH_DEFAULT_DAYS = 7;
 
 export const configSchema = z.object({
   version: z.literal(1).default(1),
@@ -50,6 +57,22 @@ export const configSchema = z.object({
   planFile: z.string().trim().min(1).default("PLAN.md"),
   /** Also record allowed actions in the audit log (denied and asked actions are always recorded). */
   auditAllowed: z.boolean().default(false),
+  /**
+   * "watch" lets actions the guard would ASK about run and records them (flagged "watched") until `watchUntil`.
+   * Hard blocks still block. Without a valid `watchUntil` in the future the guard enforces, so watch mode always ends.
+   */
+  mode: z.enum(MODES).default("enforce"),
+  /** When watch mode ends: an ISO date-time, or null. Set by `agent-guardrails mode watch`. */
+  watchUntil: z
+    .string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), { message: "must be a date and time such as 2026-11-14T09:00:00.000Z" })
+    .nullable()
+    .default(null),
+  /**
+   * Before an agent's file write is allowed, save the file's old content under .agent-guardrails/checkpoints/ so
+   * `agent-guardrails restore` can put it back. Size limits apply and nothing is ever deleted.
+   */
+  checkpoints: z.boolean().default(true),
 
   // The settings below are read by the CLI (init, update, doctor, sync). The guard ignores them.
   /** Agents this project is set up for. */

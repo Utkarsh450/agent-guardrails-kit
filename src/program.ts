@@ -1,6 +1,9 @@
 import { Command } from "commander";
 import pkg from "../package.json" with { type: "json" };
 import { bigBanner, plainBanner } from "./features/commands/banner.ts";
+import { runAlerts } from "./features/commands/alerts.ts";
+import { runCheckpoints } from "./features/commands/checkpoints.ts";
+import { runRestore } from "./features/commands/restore.ts";
 import { runAllowAdd, runAllowList, runAllowRemove } from "./features/commands/allow.ts";
 import { runApprove } from "./features/commands/approve.ts";
 import type { CommandContext } from "./features/commands/context.ts";
@@ -9,6 +12,7 @@ import { runDoctor } from "./features/commands/doctor.ts";
 import { CancelledError, CliError } from "./features/commands/errors.ts";
 import { runExplain } from "./features/commands/explain.ts";
 import { runInit } from "./features/commands/init.ts";
+import { runMode } from "./features/commands/mode.ts";
 import { runPreset } from "./features/commands/preset.ts";
 import { runReport } from "./features/commands/report.ts";
 import { runSync } from "./features/commands/sync.ts";
@@ -137,6 +141,12 @@ Nothing is created or changed without showing you the plan first, and nothing is
     .option("--json", "print the result as JSON")
     .action(async (options) => run((ctx) => runReport(ctx, options))());
 
+  command("alerts", "Follow blocked and asked actions live in a spare terminal tab (Ctrl+C to stop)")
+    .option("--notify", "also show a desktop notification (macOS and Linux)")
+    .option("--detail", "put the command text in the notification (default: only the agent and the rule)")
+    .option("--all", "also show allowed actions (only logged when auditAllowed is on)")
+    .action(async (options) => run((ctx) => runAlerts(ctx, options))());
+
   const allow = command("allow", "Choose commands that run without asking");
   allow
     .command("list")
@@ -158,6 +168,20 @@ Nothing is created or changed without showing you the plan first, and nothing is
     .option("-y, --yes", "apply without asking")
     .option("--dry-run", "show the change and write nothing")
     .action(async (name: string, options) => run((ctx) => runPreset(ctx, name, options))());
+
+  command("mode [name]", "Show or change the mode: watch (log asks for a few days, blocks stay) or enforce")
+    .option("--days <n>", "how long watch mode lasts, 1 to 30 (default 7)", (value) => Number.parseInt(value, 10))
+    .option("-y, --yes", "apply without asking")
+    .action(async (name: string | undefined, options) => run((ctx) => runMode(ctx, name, options))());
+
+  command("checkpoints [id]", "List the file copies saved before agents changed files, or show what one holds")
+    .option("--limit <n>", "how many to list (default 20)", (value) => Number.parseInt(value, 10))
+    .action(async (id: string | undefined, options) => run((ctx) => runCheckpoints(ctx, id, options))());
+
+  command("restore <id>", "Put back the files a checkpoint saved (shows a diff and asks first; never deletes)")
+    .option("--file <path>", "restore only this file")
+    .option("-y, --yes", "restore without asking")
+    .action(async (id: string, options) => run((ctx) => runRestore(ctx, id, options))());
 
   command("explain [name]", "Say in plain words why the guard blocked or asked, or what an agent or topic means")
     .action(async (name?: string) => run((ctx) => runExplain(ctx, name))());

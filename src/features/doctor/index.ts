@@ -6,6 +6,8 @@ import { detectAgents } from "../agents/index.ts";
 import { desiredGithubFiles } from "../github/index.ts";
 import { HOOKS_PATH_COMMAND, desiredGitFiles } from "../git/index.ts";
 import { diffDependencies } from "../dependencies/index.ts";
+import type { CheckpointUsage } from "../checkpoints/index.ts";
+import { CHECKPOINT_DIR, CHECKPOINT_LIMITS, watchActive } from "../hooks/guard/guard.mjs";
 import { AUDIT_FILE, AUDIT_MAX_BYTES, GUARD_INSTALL_PATH, STATE_GITIGNORE_LINES, guardSource, parseApprovalRecord, verifyApproval } from "../hooks/index.ts";
 import { PRESET_SUMMARY } from "../presets/index.ts";
 import { loadRules, planSync, RuleError, type SyncIo, DEFAULT_RULES_DIR } from "../rules/index.ts";
@@ -25,6 +27,10 @@ export interface DoctorInput {
   auditBytes: number | null;
   /** Text of ~/.gemini/antigravity-cli/settings.json, only when the person asked to check it. */
   antigravityUserSettings?: string | null;
+  /** The current time; tests pass a fixed one. */
+  now?: Date;
+  /** How many checkpoints the guard has saved and how much they hold, or null when there are none. */
+  checkpoints?: CheckpointUsage | null;
 }
 
 /** Programs that run whatever script they are given; allowing them with no arguments allows almost anything. */
@@ -57,6 +63,29 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
   if (config) {
     if (config.policy === "blocklist") {
       add({ id: "policy", area: "Settings", title: "Unknown commands", status: "warn", detail: 'policy is "blocklist": commands the guard does not recognise run without asking.', fix: 'Set "policy": "ask" in the settings file' });
+    }
+    if (config.mode === "watch") {
+      add(
+        watchActive(config, input.now ?? new Date())
+          ? { id: "watch", area: "Settings", title: "Watch mode", status: "warn", detail: `Watch mode is on until ${config.watchUntil}: actions the guard would ask about run without asking and are logged. Blocked actions are still blocked.`, fix: "agent-guardrails mode enforce" }
+          : { id: "watch", area: "Settings", title: "Watch mode", status: "info", detail: 'mode is "watch" but there is no valid end date within the next 30 days, so the guard is enforcing.', fix: "agent-guardrails mode enforce" },
+      );
+    }
+    if (!config.checkpoints) {
+      add({ id: "checkpoints", area: "Guard", title: "Checkpoints", status: "info", detail: 'Checkpoints are off ("checkpoints": false), so an agent\'s file changes are not saved first and `restore` has nothing to offer.', fix: 'Set "checkpoints": true to turn them on' });
+    } else if (input.checkpoints) {
+      const { count, bytes } = input.checkpoints;
+      const mb = (bytes / 1024 / 1024).toFixed(1);
+      const limitMb = CHECKPOINT_LIMITS.maxTotalBytes / 1024 / 1024;
+      const used = `${count} saved (limit ${CHECKPOINT_LIMITS.maxCount}), ${mb} MB of ${limitMb} MB used`;
+      const cleanup = `Move or remove ${CHECKPOINT_DIR} by hand when you no longer need the copies`;
+      if (count >= CHECKPOINT_LIMITS.maxCount || bytes >= CHECKPOINT_LIMITS.maxTotalBytes) {
+        add({ id: "checkpoints", area: "Guard", title: "Checkpoints", status: "warn", detail: `${used}. The limit is reached, so no new copies are saved. The guard never deletes or rotates them.`, fix: cleanup });
+      } else if (count >= CHECKPOINT_LIMITS.maxCount * 0.8 || bytes >= CHECKPOINT_LIMITS.maxTotalBytes * 0.8) {
+        add({ id: "checkpoints", area: "Guard", title: "Checkpoints", status: "warn", detail: `${used}. Close to the limit.`, fix: cleanup });
+      } else {
+        add({ id: "checkpoints", area: "Guard", title: "Checkpoints", status: "ok", detail: used });
+      }
     }
     if (!config.approvalGate) {
       add({ id: "gate", area: "Settings", title: "Plan approval", status: "warn", detail: "approvalGate is off: agents can write files without an approved plan.", fix: 'Set "approvalGate": true' });

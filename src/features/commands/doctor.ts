@@ -2,6 +2,7 @@ import { statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { checkpointUsage } from "../checkpoints/index.ts";
 import { AUDIT_FILE } from "../hooks/index.ts";
 import { diagnose, type Check, type DoctorResult, type Status } from "../doctor/index.ts";
 import { ANTIGRAVITY_USER_SETTINGS } from "../agents/index.ts";
@@ -59,6 +60,7 @@ export async function gatherDoctor(root: string, options: DoctorOptions = {}): P
     hooksPathSet: isRepo ? readHooksPath(root) : null,
     nodeVersion: process.version,
     auditBytes,
+    checkpoints: await checkpointUsage(root),
     ...(antigravityUserSettings !== undefined ? { antigravityUserSettings } : {}),
   });
 }

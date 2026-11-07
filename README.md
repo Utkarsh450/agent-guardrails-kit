@@ -39,6 +39,8 @@ agent-guardrails test --prompt   # a prompt to test your agent for real, in a th
 | **Shared rules** | One set of rule files in `agent-rules/` becomes `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` and each agent's own rule folder. Plan first, ask first, no deleting, no git changes, stay in the folder, no secrets. |
 | **The guard** | A hook that runs before every agent action. It blocks file and database deletes, git writes, `gh`, publishing, anything outside the project, secret files, and more. It asks you about commands it does not recognise. If it breaks, it blocks (fails closed). |
 | **Plan approval** | Agents cannot create or change files until you read their plan (`PLAN.md`) and run `agent-guardrails approve`. Editing the plan afterwards cancels the approval. |
+| **Checkpoints** | Before an agent's file tool changes a file, the old content is saved under `.agent-guardrails/checkpoints/` (1 MB per file, 200 MB in all, never deleted). `agent-guardrails restore` puts it back. Changes made through shell commands such as `sed -i` are not covered. |
+| **Script scanning** | A script file is read just before it runs. One that deletes files, drops database data or touches the guardrail files is blocked, with the file and line named. It checks patterns only: imports are not followed. |
 | **Git hooks** | Whichever tool made the change: secrets in commits, risky new dependencies and dangerous install scripts, force pushes and deleting the main branch, release branches or tags are stopped. |
 | **GitHub files** | Pull request template, issue templates, CODEOWNERS and a CI check, with actions pinned to commits. |
 | **Dashboard** | `agent-guardrails ui` opens a read-only page with the doctor report, the setup plan, what the guard blocked, and the test prompts. |
@@ -65,9 +67,13 @@ agent-guardrails test --prompt   # a prompt to test your agent for real, in a th
 | `agent-guardrails approve` | You read the agent's `PLAN.md` and approve it, so it may start changing files. |
 | `agent-guardrails allow add "pnpm test"` | Stop being asked about a command you trust. Dangerous commands can never be allowed this way. |
 | `agent-guardrails report` | What the agents tried: blocked and asked actions from the local log. |
+| `agent-guardrails checkpoints [id]` | List the copies of files the guard saved before an agent changed them, or show what one holds. |
+| `agent-guardrails restore <id>` | Put the saved files back. Shows a diff and asks first, and never deletes. Add `--file <path>` for one file. |
+| `agent-guardrails alerts` | Follow blocked and asked actions live in a spare terminal tab. Add `--notify` for desktop notifications (macOS and Linux). Press Ctrl+C to stop. |
 | `agent-guardrails explain <reason>` | Why something was blocked, in plain words, and what to do instead. |
 | `agent-guardrails sync` | Regenerate `AGENTS.md` and the per-agent files after you edit `agent-rules/`. |
 | `agent-guardrails preset <name>` | Switch between `learner`, `balanced` and `team`. |
+| `agent-guardrails mode [watch\|enforce]` | Try the kit without interruptions: `watch` lets actions it would ask about run, and logs them, for up to 30 days (default 7). Blocked actions stay blocked. |
 | `agent-guardrails test` | `--hooks` proves the guard. `--prompt` and `--gap-review` print prompts to test an agent. |
 | `agent-guardrails ui` | The read-only dashboard. |
 
@@ -87,7 +93,7 @@ All three keep the dangerous-command blocks, ask about unknown commands, and req
 
 - **Nothing is written without your say-so**, and nothing is ever deleted. Files it did not create are left alone.
 - **It fails closed.** If the guard cannot run, the action is blocked, not allowed.
-- **Agents cannot use its own commands.** `approve`, `allow`, `init`, `update`, `sync`, `preset` and `ui` are blocked for agents, so an agent cannot approve its own plan or widen its own permissions.
+- **Agents cannot use its own commands.** `approve`, `allow`, `init`, `update`, `sync`, `preset`, `mode`, `alerts`, `restore` and `ui` are blocked for agents, so an agent cannot approve its own plan or widen its own permissions.
 - **No telemetry.** Everything stays on your machine, including the audit log.
 - **The dashboard is read-only** and listens on `127.0.0.1` only.
 

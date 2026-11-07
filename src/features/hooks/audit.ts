@@ -17,6 +17,8 @@ const entrySchema = z.object({
   decision: z.enum(["allow", "ask", "deny"]),
   rule: z.string(),
   detail: z.string().default(""),
+  /** True when watch mode let an action through that would normally have asked. */
+  watched: z.boolean().optional(),
 });
 
 export type AuditEntry = z.infer<typeof entrySchema>;
@@ -49,6 +51,8 @@ export interface AuditSummary {
   /** Rules ordered by how often they fired, most first. */
   byRule: Array<{ rule: string; decision: AuditEntry["decision"]; count: number }>;
   byAgent: Record<string, number>;
+  /** Asks that watch mode let through. */
+  watched: number;
   first: string | null;
   last: string | null;
 }
@@ -58,7 +62,9 @@ export function summarizeAudit(entries: readonly AuditEntry[]): AuditSummary {
   const byAgent: Record<string, number> = {};
   const rules = new Map<string, { rule: string; decision: AuditEntry["decision"]; count: number }>();
 
+  let watched = 0;
   for (const entry of entries) {
+    if (entry.watched) watched += 1;
     byDecision[entry.decision] += 1;
     byAgent[entry.agent] = (byAgent[entry.agent] ?? 0) + 1;
     const key = `${entry.decision}:${entry.rule}`;
@@ -74,6 +80,7 @@ export function summarizeAudit(entries: readonly AuditEntry[]): AuditSummary {
     byDecision,
     byRule,
     byAgent,
+    watched,
     first: times[0] ?? null,
     last: times[times.length - 1] ?? null,
   };

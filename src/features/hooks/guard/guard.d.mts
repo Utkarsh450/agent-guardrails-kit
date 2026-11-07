@@ -9,9 +9,19 @@ export interface GuardConfig {
   approvalGate: boolean;
   planFile: string;
   auditAllowed: boolean;
+  mode: "enforce" | "watch";
+  watchUntil: string | null;
+  checkpoints: boolean;
 }
 
+/** Where checkpoints are kept, relative to the project folder. */
+export const CHECKPOINT_DIR: string;
+export const CHECKPOINT_LIMITS: Readonly<{ maxFileBytes: number; maxCount: number; maxTotalBytes: number }>;
+
 export const DEFAULT_CONFIG: Readonly<GuardConfig>;
+
+/** True only while mode is "watch" and watchUntil is a real time in the future, at most 30 days away. */
+export function watchActive(config: Pick<GuardConfig, "mode" | "watchUntil">, now?: Date): boolean;
 
 export function validateConfig(
   data: unknown,
@@ -34,6 +44,7 @@ export interface GuardFs {
   statSync(path: string): { size: number };
   lstatSync(path: string): { isDirectory(): boolean; isSymbolicLink(): boolean };
   appendFileSync(path: string, data: string, encoding?: "utf8"): void;
+  writeFileSync(path: string, data: string, encoding?: "utf8"): void;
 }
 
 export interface GuardContext {
@@ -93,4 +104,6 @@ export function runGuard(options: {
   fsImpl?: GuardFs;
   home?: string;
   audit?: boolean;
+  /** The current time; tests pass a fixed one. */
+  now?: Date;
 }): GuardResponse;

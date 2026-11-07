@@ -30,9 +30,13 @@ export const DEFAULT_CONFIG = Object.freeze({
   approvalGate: true,
   planFile: "PLAN.md",
   auditAllowed: false,
+  mode: "enforce",
+  watchUntil: null,
+  checkpoints: true,
 });
 
 const POLICIES = ["ask", "blocklist", "allowlist"];
+const MODES = ["enforce", "watch"];
 
 /** Validates a parsed config object. Returns { config } or { error }. */
 export function validateConfig(data) {
@@ -57,7 +61,7 @@ export function validateConfig(data) {
   if (config.allowCommands.some((pattern) => pattern.split(/\s+/)[0] === "*")) {
     return { error: 'allowCommands entries must start with a command name, not "*"' };
   }
-  for (const key of ["approvalGate", "auditAllowed"]) {
+  for (const key of ["approvalGate", "auditAllowed", "checkpoints"]) {
     if (key in data) {
       if (typeof data[key] !== "boolean") return { error: `${key} must be true or false` };
       config[key] = data[key];
@@ -69,8 +73,36 @@ export function validateConfig(data) {
     }
     config.planFile = data.planFile.trim();
   }
+  if ("mode" in data) {
+    if (!MODES.includes(data.mode)) return { error: `mode must be one of ${MODES.join(", ")}` };
+    config.mode = data.mode;
+  }
+  if ("watchUntil" in data) {
+    const until = data.watchUntil;
+    if (until !== null && (typeof until !== "string" || Number.isNaN(Date.parse(until)))) {
+      return { error: "watchUntil must be null or a date and time such as 2026-11-14T09:00:00.000Z" };
+    }
+    config.watchUntil = until;
+  }
   return { config };
 }
+
+/** Watch mode can never be set to last longer than this from now. A hand-edited date further away means "enforce". */
+const WATCH_MAX_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * True only while mode is "watch" AND watchUntil is a real time in the future, at most 30 days away.
+ * Anything else (no date, a past date, a bad date, a date years away) means the guard enforces.
+ */
+export function watchActive(config, now = new Date()) {
+  if (config.mode !== "watch" || typeof config.watchUntil !== "string") return false;
+  const until = Date.parse(config.watchUntil);
+  const current = now.getTime();
+  return Number.isFinite(until) && Number.isFinite(current) && until > current && until - current <= WATCH_MAX_MS;
+}
+
+/** Asks that watch mode never lets through: changes to rule files, and MCP tools that act on outside systems. */
+const WATCH_KEEP_ASKING = new Set(["protected-file", "mcp-action"]);
 
 // ───────────────────────────── decisions ─────────────────────────────
 
@@ -1007,6 +1039,124 @@ function checkInlineCode(code, label) {
   return mk("ask", "inline-code", `${label} code is not checked beyond known-dangerous calls. The user must approve it.`);
 }
 
+// ───────────────────────────── script scanning ─────────────────────────────
+// A script file can hide what a typed command would show. Just before a script runs, the guard reads it and blocks
+// it when it contains something the rules already forbid. This is a pattern check: imports are not followed and
+// disguised code gets through (see docs/LIMITS.md).
+
+const SCRIPT_MAX_BYTES = 256 * 1024;
+const SCRIPT_MAX_FILES = 3;
+const SHELL_SCRIPT_EXT = /\.(sh|bash|zsh|ksh)$/i;
+const CODE_SCRIPT_EXT = /\.(py|js|mjs|cjs|ts|mts|cts|rb|pl|php|lua)$/i;
+const SHEBANG_SHELL = /^#!\s*(?:\S*\/)?(?:env\s+(?:-\S+\s+)*)?(?:sh|bash|zsh|dash|ksh|ash)\b/;
+const SHEBANG_CODE = /^#!\s*(?:\S*\/)?(?:env\s+(?:-\S+\s+)*)?(?:python[\d.]*|node|nodejs|deno|bun|ruby|perl|php|lua|tsx|ts-node)\b/;
+/** Installed dependencies are not scanned. */
+const SCRIPT_SKIP_DIR = /(^|\/)(node_modules|\.venv|venv|site-packages)\//;
+
+/**
+ * Narrower than the inline-code patterns on purpose: whole project scripts use things like pandas `df.drop(...)`,
+ * `shutil.move` or the word "truncate" in comments all the time, and those must not be blocked.
+ */
+const SCRIPT_DELETE =
+  /(\bos\.(remove|unlink|rmdir|removedirs)\b|\bshutil\.rmtree\b|send2trash|\.unlink\s*\(|\.rmdir\s*\(|\brmtree\b|\brmSync\b|\brmdirSync\b|\bunlinkSync\b|\bfs\.(promises\.)?(rm|rmdir|unlink)\b|\brimraf\b|\bremove_tree\b|\bFile\.(delete|unlink)\b|\bFileUtils\.(rm|rm_r|rm_rf|remove|remove_dir|remove_entry|rmdir)\w*|\bDir\.(rmdir|delete|unlink)\b|\bDeno\.remove\b|\bshred\b|\b(unlink|rmdir)\s*\(|import\s*\{[^}]*\b(rm|rmdir|unlink|rmSync|rmdirSync|unlinkSync)\b[^}]*\}\s*from\s*["'](node:)?fs(\/promises)?["'])/i;
+const SCRIPT_SQL =
+  /\b(delete\s+from\s+[\w."`[\]]+(\s+where\b|\s*[;'"`])|drop\s+(table|database|schema)\b|truncate\s+table\b|alter\s+table\s+[^;\n]*\bdrop\b|flushall\b|flushdb\b|dropdatabase\b)/i;
+
+/** Reads a script for scanning, or returns null: outside the project, a directory, a secret file, binary, or too big. */
+function readScriptFile(token, cwd, ctx) {
+  if (token.dyn || token.v === "") return null;
+  const info = pathInfo(token.v, cwd, ctx);
+  if (!info.inside || info.rel === null || isSecretFile(info.rel) || SCRIPT_SKIP_DIR.test(info.rel)) return null;
+  try {
+    if (ctx.fs.lstatSync(info.real).isDirectory()) return null;
+  } catch {
+    return null;
+  }
+  try {
+    if (ctx.fs.statSync(info.real).size > SCRIPT_MAX_BYTES) return null;
+  } catch {
+    // size not known here: the length check below still applies
+  }
+  let text;
+  try {
+    text = ctx.fs.readFileSync(info.real, "utf8");
+  } catch {
+    return null;
+  }
+  if (text.length > SCRIPT_MAX_BYTES || text.includes(String.fromCharCode(0))) return null;
+  return { rel: info.rel, text };
+}
+
+const lineOf = (text, index) => text.slice(0, index).split("\n").length;
+
+/** Code in Python, JavaScript, Ruby and so on: the earliest forbidden thing, with its line. */
+function scanCode(rel, text) {
+  let best = null;
+  const checks = [
+    [PROTECTED_MENTION, "touches guardrail files"],
+    [SCRIPT_DELETE, "deletes files"],
+    [SCRIPT_SQL, "contains a destructive database statement"],
+  ];
+  for (const [pattern, what] of checks) {
+    const match = pattern.exec(text);
+    if (match && (best === null || match.index < best.index)) best = { index: match.index, what, hit: match[0] };
+  }
+  if (best === null) return null;
+  const hit = best.hit.replace(/\s+/g, " ").slice(0, 40);
+  return mk("deny", "script-scan", `${rel} line ${lineOf(text, best.index)} ${best.what} (${hit}). Run it yourself, or tell the user what it should do.`);
+}
+
+/** A shell script goes through the same analysis as a typed command. */
+function scanShellScript(rel, text, ctx, state, depth) {
+  const whole = analyzeShell(text, ctx, { ...state }, depth + 1);
+  if (whole.decision !== "deny") return null;
+  // Find the first line that is blocked on its own, so the message can say where.
+  let line = 0;
+  const lines = text.split("\n");
+  for (let k = 0; k < lines.length && k < 2000 && line === 0; k += 1) {
+    if (lines[k].trim() !== "" && analyzeShell(lines[k], ctx, { ...state }, depth + 1).decision === "deny") line = k + 1;
+  }
+  return mk("deny", "script-scan", `${rel}${line > 0 ? ` line ${line}` : ""} would be blocked (${whole.rule}): ${whole.reason} Run it yourself, or tell the user what it should do.`);
+}
+
+/**
+ * Looks at the script files a command is about to run. Returns { deny, note }: a deny decision when a file has a
+ * finding, otherwise a note saying what was scanned (or null when nothing was).
+ */
+function scanScripts(prog, first, args, ctx, state, depth) {
+  const candidates = [];
+  if (SHELLS.has(prog) || prog === "source" || prog === ".") {
+    if (SHELLS.has(prog) && args.some((a) => /^-[a-zA-Z]*c$/.test(a.v))) return { deny: null, note: null };
+    const target = args.find((a) => !isOption(a));
+    if (target) candidates.push({ token: target, kind: "shell" });
+  } else if (INTERPRETERS.has(prog)) {
+    if (inlineCodeOf(prog, args).length > 0 || args.some((a) => a.v === "-m")) return { deny: null, note: null };
+    for (const a of args) {
+      if (candidates.length >= SCRIPT_MAX_FILES) break;
+      if (!isOption(a) && !a.dyn && CODE_SCRIPT_EXT.test(a.v)) candidates.push({ token: a, kind: "code" });
+    }
+  } else if (!first.dyn && first.v.includes("/")) {
+    candidates.push({ token: first, kind: "auto" });
+  }
+
+  let note = null;
+  for (const { token, kind } of candidates) {
+    const file = readScriptFile(token, state.cwd, ctx);
+    if (file === null) continue;
+    let type = kind;
+    if (type === "auto") {
+      const firstLine = file.text.split("\n", 1)[0];
+      if (SHEBANG_SHELL.test(firstLine) || SHELL_SCRIPT_EXT.test(file.rel)) type = "shell";
+      else if (SHEBANG_CODE.test(firstLine) || CODE_SCRIPT_EXT.test(file.rel)) type = "code";
+      else continue;
+    }
+    const found = type === "shell" ? scanShellScript(file.rel, file.text, ctx, state, depth) : scanCode(file.rel, file.text);
+    if (found !== null) return { deny: found, note: null };
+    note = `Scanned ${file.rel}: no file deletion, database drop or guardrail-file edit found. Imports and other files are not followed.`;
+  }
+  return { deny: null, note };
+}
+
 /** Finds the nearest package.json at or above `cwd` (inside the project) and returns its scripts. */
 function readScripts(cwd, ctx) {
   let dir = cwd;
@@ -1430,7 +1580,7 @@ function searchPathArgs(prog, args) {
  * the normal rules.
  */
 const GUARDRAILS_CLI = /^agent-guardrails(?:-kit)?(?:\.mjs|\.js|\.cmd)?(?:@[\w.~^-]+)?$/i;
-const GUARDRAILS_MODIFYING = new Set(["init", "update", "sync", "approve", "allow", "preset", "ui"]);
+const GUARDRAILS_MODIFYING = new Set(["init", "update", "sync", "approve", "allow", "preset", "mode", "alerts", "restore", "ui"]);
 
 function guardrailsCliSubcommand(words) {
   for (let k = 0; k < words.length; k += 1) {
@@ -1549,6 +1699,13 @@ function classifyCommand(cmd, ctx, state, depth) {
     return worst(parts);
   }
 
+  // ── script files: read them before they run ──
+  const scan = scanScripts(prog, first, args, ctx, state, depth);
+  if (scan.deny !== null) {
+    parts.push(scan.deny);
+    return worst(parts);
+  }
+
   // ── shells ──
   if (SHELLS.has(prog)) {
     const cIndex = args.findIndex((a) => /^-[a-zA-Z]*c$/.test(a.v));
@@ -1562,11 +1719,11 @@ function classifyCommand(cmd, ctx, state, depth) {
       parts.push(analyzeShell(cmd.stdinText, ctx, { ...state }, depth + 1));
       return worst(parts);
     }
-    parts.push(mk("ask", "script-exec", `Running a shell script file is not checked. The user must approve ${prog} ${args.map((a) => a.v).join(" ")}.`.trim()));
+    parts.push(mk("ask", "script-exec", `${scan.note ?? "Running a shell script file is not checked."} The user must approve ${prog} ${args.map((a) => a.v).join(" ")}.`.trim()));
     return worst(parts);
   }
   if (prog === "source" || prog === ".") {
-    parts.push(mk("ask", "script-exec", "Sourcing a file runs unchecked commands."));
+    parts.push(mk("ask", "script-exec", `${scan.note ?? "Sourcing a file runs unchecked commands."} The user must approve it.`));
     return worst(parts);
   }
 
@@ -1999,7 +2156,7 @@ export function respond(agent, result) {
 
 const AUDIT_MAX_BYTES = 10 * 1024 * 1024;
 
-function writeAudit(ctx, agent, request, result) {
+function writeAudit(ctx, agent, request, result, watched = false) {
   try {
     if (result.decision === "allow" && !ctx.config.auditAllowed) return;
     const fsx = ctx.fs;
@@ -2020,10 +2177,137 @@ function writeAudit(ctx, agent, request, result) {
       decision: result.decision,
       rule: result.rule,
       detail: String(detail).slice(0, 300),
+      ...(watched ? { watched: true } : {}),
     };
     fsx.appendFileSync(file, `${JSON.stringify(entry)}\n`, "utf8");
   } catch {
     // logging must never change the decision
+  }
+}
+
+// ───────────────────────────── checkpoints ─────────────────────────────
+// Before an agent's file write goes through, the old content of the file is copied to
+// .agent-guardrails/checkpoints/<id>/files/<path> with a manifest, so `agent-guardrails restore` can put it back.
+// Taking a checkpoint never changes the guard's answer: any failure is swallowed. Nothing is ever deleted or rotated;
+// when a limit is reached the guard simply stops saving more.
+
+export const CHECKPOINT_DIR = `${STATE_DIR}/checkpoints`;
+export const CHECKPOINT_LIMITS = Object.freeze({ maxFileBytes: 1024 * 1024, maxCount: 1000, maxTotalBytes: 200 * 1024 * 1024 });
+/** Folders whose files are never copied: they are rebuilt, or they are not the project's own work. */
+const CHECKPOINT_SKIP = /(^|\/)(node_modules|\.git|dist|build|\.agent-guardrails)(\/|$)/;
+
+/** The project files a write or patch is about to change, as { rel, real } (inside the project only). */
+function checkpointTargets(request, ctx) {
+  const base = request.cwd ?? ctx.cwd;
+  const raw = [];
+  if (request.kind === "write") raw.push(...request.paths);
+  else if (request.kind === "patch") {
+    for (const line of request.patch.split("\n")) {
+      const m = /^\*\*\* (?:Add File|Update File|Move to): (.+)$/.exec(line.trim());
+      if (m) raw.push(m[1].trim());
+    }
+  }
+  const seen = new Set();
+  const out = [];
+  for (const target of raw) {
+    const info = pathInfo(target, base, ctx);
+    if (!info.inside || info.rel === null || info.rel === "" || seen.has(info.real)) continue;
+    seen.add(info.real);
+    out.push({ rel: info.rel, real: info.real });
+  }
+  return out;
+}
+
+function takeCheckpoint(request, ctx, agent, now) {
+  try {
+    const fsx = ctx.fs;
+    const targets = checkpointTargets(request, ctx);
+    if (targets.length === 0) return;
+
+    const store = path.join(ctx.rootReal, CHECKPOINT_DIR);
+    const indexFile = path.join(store, "index.log");
+    let count = 0;
+    let total = 0;
+    try {
+      for (const line of fsx.readFileSync(indexFile, "utf8").split("\n")) {
+        if (line === "") continue;
+        try {
+          total += Number(JSON.parse(line).bytes) || 0;
+        } catch {
+          // a torn line still counts as one checkpoint
+        }
+        count += 1;
+      }
+    } catch {
+      // no index yet
+    }
+    if (count >= CHECKPOINT_LIMITS.maxCount || total >= CHECKPOINT_LIMITS.maxTotalBytes) return;
+
+    const files = [];
+    const copies = [];
+    let bytes = 0;
+    for (const target of targets) {
+      const entry = { path: target.rel, existed: false, bytes: 0 };
+      files.push(entry);
+      if (CHECKPOINT_SKIP.test(target.rel) || isSecretFile(target.rel)) {
+        entry.skipped = "ignored-folder";
+        continue;
+      }
+      try {
+        if (fsx.lstatSync(target.real).isDirectory()) {
+          entry.existed = true;
+          entry.skipped = "not-a-file";
+          continue;
+        }
+      } catch {
+        continue; // the file does not exist yet: recorded as "did not exist"
+      }
+      entry.existed = true;
+      let size;
+      try {
+        size = fsx.statSync(target.real).size;
+      } catch {
+        size = undefined;
+      }
+      if (size !== undefined && size > CHECKPOINT_LIMITS.maxFileBytes) {
+        entry.bytes = size;
+        entry.skipped = "too-big";
+        continue;
+      }
+      let text;
+      try {
+        text = fsx.readFileSync(target.real, "utf8");
+      } catch {
+        entry.skipped = "unreadable";
+        continue;
+      }
+      const length = Buffer.byteLength(text, "utf8");
+      entry.bytes = length;
+      if (length > CHECKPOINT_LIMITS.maxFileBytes) {
+        entry.skipped = "too-big";
+      } else if (text.includes(String.fromCharCode(0)) || text.includes(String.fromCharCode(0xfffd)) || (size !== undefined && size !== length)) {
+        // Binary, or text that would not copy back byte for byte.
+        entry.skipped = "not-text";
+      } else {
+        copies.push({ rel: target.rel, text });
+        bytes += length;
+      }
+    }
+    if (total + bytes > CHECKPOINT_LIMITS.maxTotalBytes) return;
+
+    const id = `${now.toISOString().replace(/[-:.]/g, "")}-${crypto.randomBytes(2).toString("hex")}`;
+    const dir = path.join(store, id);
+    for (const copy of copies) {
+      const dest = path.join(dir, "files", ...copy.rel.split("/"));
+      fsx.mkdirSync(path.dirname(dest), { recursive: true });
+      fsx.writeFileSync(dest, copy.text, "utf8");
+    }
+    fsx.mkdirSync(dir, { recursive: true });
+    const manifest = { version: 1, id, ts: now.toISOString(), agent, tool: request.tool ?? request.kind, files };
+    fsx.writeFileSync(path.join(dir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    fsx.appendFileSync(indexFile, `${JSON.stringify({ id, bytes })}\n`, "utf8");
+  } catch {
+    // a checkpoint must never change the decision
   }
 }
 
@@ -2050,7 +2334,7 @@ function inferAgent(payload) {
  * Runs the guard for one payload. Pure apart from reading project files and appending to the audit log.
  * Never throws: any failure becomes a deny.
  */
-export function runGuard({ stdin, argv = [], scriptDir, fsImpl = fs, home = process.env.HOME ?? process.env.USERPROFILE ?? "/", audit = true }) {
+export function runGuard({ stdin, argv = [], scriptDir, fsImpl = fs, home = process.env.HOME ?? process.env.USERPROFILE ?? "/", audit = true, now = new Date() }) {
   const args = parseArgs(argv);
   let agent = AGENTS.includes(args.agent) ? args.agent : undefined;
   try {
@@ -2085,8 +2369,15 @@ export function runGuard({ stdin, argv = [], scriptDir, fsImpl = fs, home = proc
     const ctx = { root, rootReal, cwd: rootReal, home, config, fs: fsImpl };
     const request = normalizeRequest(payload);
     const result = evaluate(request, ctx);
-    if (audit) writeAudit(ctx, agent, request, result);
-    return respond(agent, result);
+    // Watch mode: an "ask" runs and is logged as what it was (flagged watched). Denies are never softened.
+    const watched = result.decision === "ask" && !WATCH_KEEP_ASKING.has(result.rule) && watchActive(config, now);
+    if (audit) writeAudit(ctx, agent, request, result, watched);
+    // Save the old content of files about to be written. Codex cannot ask, so an ask there is a deny and writes nothing.
+    const effective = watched ? "allow" : result.decision === "ask" && agent === "codex" ? "deny" : result.decision;
+    if (audit && config.checkpoints && effective !== "deny" && (request.kind === "write" || request.kind === "patch")) {
+      takeCheckpoint(request, ctx, agent, now);
+    }
+    return respond(agent, watched ? mk("allow", "watched", `Watch mode: this would have asked (${result.rule}).`) : result);
   } catch (error) {
     return respond(agent ?? "claude", mk("deny", "guard-error", `The guard crashed and fails closed (${error?.message ?? error}).`));
   }

@@ -53,12 +53,21 @@ export function fakeFs(files: Record<string, string> = {}): FakeFs {
       if (dirs.has(p)) return { isDirectory: () => true, isSymbolicLink: () => false };
       throw Object.assign(new Error(`ENOENT: ${p}`), { code: "ENOENT" });
     },
-    mkdirSync: () => undefined,
-    statSync: () => {
-      throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+    mkdirSync: (p) => {
+      for (let dir = p; dir !== "/" && dir !== "."; dir = path.posix.dirname(dir)) dirs.add(dir);
+      return undefined;
     },
-    appendFileSync: (_p, data) => {
+    statSync: (p) => {
+      const content = map.get(p);
+      if (content === undefined) throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+      return { size: Buffer.byteLength(content, "utf8") };
+    },
+    appendFileSync: (p, data) => {
       appended.push(data);
+      map.set(p, (map.get(p) ?? "") + data);
+    },
+    writeFileSync: (p, data) => {
+      map.set(p, data);
     },
   };
 }

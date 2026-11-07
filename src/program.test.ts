@@ -12,7 +12,7 @@ describe("buildProgram", () => {
 
   it("registers every command", () => {
     const names = buildProgram().commands.map((c) => c.name());
-    expect(names).toEqual(["init", "update", "doctor", "sync", "approve", "report", "allow", "preset", "explain", "test", "ui"]);
+    expect(names).toEqual(["init", "update", "doctor", "sync", "approve", "report", "alerts", "allow", "preset", "mode", "checkpoints", "restore", "explain", "test", "ui"]);
     const allow = buildProgram().commands.find((c) => c.name() === "allow");
     expect(allow?.commands.map((c) => c.name())).toEqual(["list", "add", "remove"]);
   });

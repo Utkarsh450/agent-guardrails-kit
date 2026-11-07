@@ -6,7 +6,7 @@ import guardSource from "./guard/guard.mjs?raw";
 export const GUARD_INSTALL_PATH = ".agent-guardrails/guard.mjs";
 
 /** Local state the guard keeps. The guard script itself is committed; these two are per person and stay out of git. */
-export const STATE_GITIGNORE_LINES: readonly string[] = [".agent-guardrails/audit.log", ".agent-guardrails/approval.json"];
+export const STATE_GITIGNORE_LINES: readonly string[] = [".agent-guardrails/audit.log", ".agent-guardrails/approval.json", ".agent-guardrails/checkpoints/"];
 
 /** The settings file written when the project has none. Never overwritten afterwards. */
 export function defaultConfigJson(): string {
