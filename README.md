@@ -8,7 +8,34 @@ It sets up shared rules every agent reads, hooks that block dangerous actions, g
 
 ## Quick start
 
-Run this inside your project folder (Node 22.12 or newer, and git):
+You need Node 22.12 or newer and git.
+
+### Install from GitHub (works today)
+
+The package is not on npm yet, so build it from this repository first. You do this once.
+
+| Step | Command | What it does |
+|---|---|---|
+| 1 | `git clone https://github.com/Utkarsh450/agent-guradrails-kit.git` | Copies the code to your machine |
+| 2 | `cd agent-guradrails-kit` | Goes into the copied folder |
+| 3 | `pnpm install` | Installs the dependencies |
+| 4 | `pnpm build` | Builds the command into `dist/cli.mjs` |
+
+Then, inside **your own project folder**, run it with the full path to the file you just built:
+
+```bash
+node /path/to/agent-guradrails-kit/dist/cli.mjs init
+```
+
+Replace `/path/to/agent-guradrails-kit` with the folder you cloned. To type `agent-guardrails` instead of the long command, add an alias in your shell:
+
+```bash
+alias agent-guardrails="node /path/to/agent-guradrails-kit/dist/cli.mjs"
+```
+
+### After it is published to npm
+
+Not available yet. When the package is published, this will work in your project folder, with no clone or build:
 
 ```bash
 npx agent-guardrails-kit init
@@ -22,6 +49,8 @@ pnpm dlx agent-guardrails-kit init
 bunx agent-guardrails-kit init
 ```
 
+### What `init` does
+
 It asks which agents you use and how strict to be, shows you the full list of files it would create, and waits for your yes. Then:
 
 ```bash
@@ -31,6 +60,30 @@ agent-guardrails test --prompt   # a prompt to test your agent for real, in a th
 ```
 
 (`agent-guardrails-kit` works as the command name too.)
+
+## Try it safely first
+
+Test it in a throwaway folder before you trust it in a real project. Nothing here touches your real work.
+
+| Step | Command | What it does |
+|---|---|---|
+| 1 | `mkdir guardrails-sandbox`, then `cd guardrails-sandbox`, then `git init` | Makes a new, empty test folder |
+| 2 | `agent-guardrails init --dry-run` | Only shows the files it would create. Writes nothing |
+| 3 | `agent-guardrails init` | Sets up the guard in the sandbox, after your yes |
+| 4 | `agent-guardrails doctor`, then `agent-guardrails test --hooks` | Shows what is protected, and proves the guard blocks dangerous commands without any agent |
+| 5 | `agent-guardrails alerts --notify` in a second terminal tab | Shows blocked and asked actions as they happen |
+| 6 | `agent-guardrails test --prompt` | Prints a prompt. Open your agent in the sandbox folder and paste it. The agent then tries to delete a file, push, write outside the folder and more |
+
+### What to look for
+
+| You should see | Why |
+|---|---|
+| A `BLOCKED` line in the alerts tab for each dangerous attempt | The guard stopped it before it ran |
+| The agent cannot create or change files until you run `agent-guardrails approve` | The plan has to be approved first |
+| `agent-guardrails checkpoints` lists copies of files the agent changed | Old content is saved before an agent's file tool edits a file. `agent-guardrails restore <id>` puts it back |
+| After `agent-guardrails mode watch`, unknown commands run and are logged as `WATCHED` | Watch mode skips the questions for a while. Blocked actions stay blocked |
+
+If something dangerous ran that should have been blocked, report it as described in [SECURITY.md](SECURITY.md). That is the most useful result a test can give.
 
 ## What you get
 
