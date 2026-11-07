@@ -83,6 +83,13 @@ export const configSchema = z.object({
   alwaysRuleFiles: z.boolean().default(false),
   /** Whether init sets up the .github folder. */
   github: z.boolean().default(true),
+  /**
+   * The team preset this project follows: "./file.json" in the project, or the name of an installed package.
+   * Set by `agent-guardrails preset use`; `update` applies it again.
+   */
+  extends: z.string().optional(),
+  /** Fingerprint of the preset settings when they were applied, so `doctor` can see that the source changed. */
+  extendsHash: z.string().optional(),
 });
 
 export type GuardrailsConfig = z.infer<typeof configSchema>;

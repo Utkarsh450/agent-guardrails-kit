@@ -23,6 +23,12 @@ export const TEAM_GIT_ALLOW = ["ls-files", "ls-tree", "rev-parse", "rev-list", "
 
 const BASE_GIT_ALLOW = ["status", "diff", "log", "show"] as const;
 
+/** Every read-only git subcommand a preset may allow. */
+export const SAFE_GIT_ALLOW: readonly string[] = [...BASE_GIT_ALLOW, ...TEAM_GIT_ALLOW];
+
+/** Programs that run whatever script they are given; allowing one with no arguments allows almost anything. */
+export const BROAD_PROGRAMS: ReadonlySet<string> = new Set(["sh", "bash", "zsh", "dash", "fish", "node", "python", "python3", "ruby", "perl", "php", "deno", "bun", "tsx", "ts-node", "env", "xargs", "find", "make"]);
+
 /** Commands the team preset lets run without asking. Hard blocks still apply to all of them. */
 export function stackAllowCommands(stack: Stack, manager: PackageManager | null): string[] {
   switch (stack) {

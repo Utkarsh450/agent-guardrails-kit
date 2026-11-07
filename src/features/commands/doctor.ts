@@ -7,7 +7,8 @@ import { AUDIT_FILE } from "../hooks/index.ts";
 import { diagnose, type Check, type DoctorResult, type Status } from "../doctor/index.ts";
 import { ANTIGRAVITY_USER_SETTINGS } from "../agents/index.ts";
 import { diskSyncIo } from "../rules/index.ts";
-import { readHooksPath } from "../setup/index.ts";
+import { loadSavedConfig, readHooksPath } from "../setup/index.ts";
+import { PresetError, loadPresetFromSource, type TeamPresetStatus } from "../team-presets/index.ts";
 import { findProjectRoot, type CommandContext } from "./context.ts";
 
 export interface DoctorOptions {
@@ -55,8 +56,20 @@ export async function gatherDoctor(root: string, options: DoctorOptions = {}): P
     if (antigravityUserSettings === "") antigravityUserSettings = "{}";
   }
   const isRepo = (await io.readExisting(".git")) !== null;
+  let teamPreset: TeamPresetStatus | undefined;
+  const saved = await loadSavedConfig(io);
+  if (saved?.extends !== undefined) {
+    try {
+      const loaded = await loadPresetFromSource(root, saved.extends);
+      teamPreset = { state: "ok", source: loaded.source, name: loaded.preset.name, hash: loaded.hash, settings: loaded.preset.settings };
+    } catch (error) {
+      if (!(error instanceof PresetError)) throw error;
+      teamPreset = { state: "error", source: saved.extends, error: error.message };
+    }
+  }
   return diagnose({
     io,
+    ...(teamPreset ? { teamPreset } : {}),
     hooksPathSet: isRepo ? readHooksPath(root) : null,
     nodeVersion: process.version,
     auditBytes,

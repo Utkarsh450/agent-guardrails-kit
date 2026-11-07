@@ -1,5 +1,6 @@
 import { detectPackageManager } from "../package-manager/index.ts";
 import { diskSyncIo } from "../rules/index.ts";
+import { PresetError, loadPresetFromSource, type AppliedPreset } from "../team-presets/index.ts";
 import { buildSetupPlan, loadSavedConfig, readHooksPath } from "../setup/index.ts";
 import { CliError } from "./errors.ts";
 import { findProjectRoot, type CommandContext } from "./context.ts";
@@ -32,8 +33,25 @@ export async function runUpdate(ctx: CommandContext, options: UpdateOptions = {}
     throw new CliError("The saved settings list no agents. Run `agent-guardrails init --agents <list>` to choose them.");
   }
 
+  // A project that follows a team preset gets it applied again, in the same reviewed plan. A source that is
+  // missing or invalid stops the update: skipping it silently would leave the project on stale settings.
+  let teamPreset: AppliedPreset | undefined;
+  if (saved.extends !== undefined) {
+    try {
+      const loaded = await loadPresetFromSource(root, saved.extends);
+      teamPreset = { settings: loaded.preset.settings, source: loaded.source, hash: loaded.hash };
+      ui.info(`Following the team preset "${loaded.preset.name}" (${loaded.source}).`);
+    } catch (error) {
+      if (error instanceof PresetError) {
+        throw new CliError(`The team preset ${saved.extends} could not be applied: ${error.message} Fix it, or remove "extends" from agent-guardrails.config.json.`);
+      }
+      throw error;
+    }
+  }
+
   const manager = await detectPackageManager(io.readExisting);
   const plan = await buildSetupPlan({
+    ...(teamPreset ? { teamPreset } : {}),
     options: { agents: saved.agents, preset: saved.preset, stack: saved.stack, packageManager: manager.manager, github: saved.github, ...(publishedPackage() ? { doctorPackage: publishedPackage()! } : {}) },
     io,
     hooksPathSet: readHooksPath(root),

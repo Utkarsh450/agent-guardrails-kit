@@ -7,6 +7,7 @@ import { HOOKS_PATH_COMMAND, planGitFiles } from "../git/index.ts";
 import { GUARD_INSTALL_PATH, guardSource } from "../hooks/index.ts";
 import { PRESETS, STACKS, presetSettings } from "../presets/index.ts";
 import { DEFAULT_RULES_DIR, defaultRuleSources, planSync, type SyncIo } from "../rules/index.ts";
+import { mergeSettings, type AppliedPreset } from "../team-presets/index.ts";
 import type { Note, PlanEntry, PlanGroup, SetupOptions, SetupPlan } from "./types.ts";
 
 export interface PlanInputs {
@@ -20,6 +21,8 @@ export interface PlanInputs {
    * so a rule the person deliberately deleted is not quietly brought back.
    */
   createMissingRules?: boolean;
+  /** A team preset the project follows (`update` passes it). Applied to the settings file in this same plan. */
+  teamPreset?: AppliedPreset;
 }
 
 function tag(group: PlanGroup, files: readonly PlannedFile[]): PlanEntry[] {
@@ -27,7 +30,7 @@ function tag(group: PlanGroup, files: readonly PlannedFile[]): PlanEntry[] {
 }
 
 /** Builds the config file content: guard settings only when missing, CLI settings always current. */
-function configTransform(options: SetupOptions) {
+function configTransform(options: SetupOptions, teamPreset?: AppliedPreset) {
   const settings = presetSettings(options.preset, options.stack, options.packageManager);
   return (config: JsonObject): JsonObject => {
     const next: JsonObject = {};
@@ -52,7 +55,12 @@ function configTransform(options: SetupOptions) {
     for (const [key, value] of Object.entries(config)) if (!(key in next)) next[key] = value;
 
     try {
-      parseConfig(JSON.stringify(next));
+      const project = parseConfig(JSON.stringify(next));
+      if (teamPreset) {
+        // The team preset can only keep or raise protection, and the project's own entries stay.
+        Object.assign(next, mergeSettings(project, teamPreset.settings), { extends: teamPreset.source, extendsHash: teamPreset.hash });
+        parseConfig(JSON.stringify(next));
+      }
     } catch (error) {
       if (error instanceof ConfigError) throw new MergeError(`the existing settings are invalid, so nothing was changed (${error.message})`);
       throw error;
@@ -76,7 +84,7 @@ export async function loadSavedConfig(io: SyncIo): Promise<GuardrailsConfig | nu
  * Works out everything init or update would do, without writing anything:
  * rules, guard, per-agent configs, git hooks, GitHub files and the settings file.
  */
-export async function buildSetupPlan({ options, io, hooksPathSet, createMissingRules = true }: PlanInputs): Promise<SetupPlan> {
+export async function buildSetupPlan({ options, io, hooksPathSet, createMissingRules = true, teamPreset }: PlanInputs): Promise<SetupPlan> {
   const read = io.readExisting;
   const entries: PlanEntry[] = [];
 
@@ -89,7 +97,7 @@ export async function buildSetupPlan({ options, io, hooksPathSet, createMissingR
   entries.push(...tag("rules", ruleFiles));
 
   // 2. The settings file.
-  const config = await planJsonConfig(CONFIG_FILE, read, configTransform(options));
+  const config = await planJsonConfig(CONFIG_FILE, read, configTransform(options, teamPreset));
   entries.push(...tag("config", [config]));
 
   // 3. Generated agent files, planned against what the rule folder WILL contain.

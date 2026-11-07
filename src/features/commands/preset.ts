@@ -5,6 +5,7 @@ import { detectPackageManager } from "../package-manager/index.ts";
 import { PRESET_SUMMARY, presetSettings } from "../presets/index.ts";
 import { diskSyncIo } from "../rules/index.ts";
 import { loadSavedConfig, renderDiff } from "../setup/index.ts";
+import { runPresetExport, runPresetUse } from "./team-preset.ts";
 import { CancelledError, CliError } from "./errors.ts";
 import { parsePreset, parseStack, findProjectRoot, type CommandContext } from "./context.ts";
 
@@ -12,6 +13,11 @@ export interface PresetOptions {
   stack?: string;
   yes?: boolean;
   dryRun?: boolean;
+  /** The file or package for `preset use`, or the file to write for `preset export`. */
+  target?: string;
+  /** Name and description written into an exported preset. */
+  name?: string;
+  description?: string;
 }
 
 /**
@@ -20,6 +26,10 @@ export interface PresetOptions {
  */
 export async function runPreset(ctx: CommandContext, name: string, options: PresetOptions = {}): Promise<number> {
   const { ui } = ctx;
+  // Two more words share this command: `preset export [file]` and `preset use <file or package>`.
+  if (name === "export") return runPresetExport(ctx, options.target, options);
+  if (name === "use") return runPresetUse(ctx, options.target, options);
+
   const root = findProjectRoot(ctx.cwd);
   const io = diskSyncIo(root);
   const saved = await loadSavedConfig(io);
@@ -31,7 +41,10 @@ export async function runPreset(ctx: CommandContext, name: string, options: Pres
   const settings = presetSettings(preset, stack, manager.manager);
 
   const plan = await planJsonConfig(CONFIG_FILE, io.readExisting, (config) => {
-    const next = { ...config, ...settings, preset, stack };
+    const next: Record<string, unknown> = { ...config, ...settings, preset, stack };
+    // Choosing a built-in preset ends the team preset: otherwise the next `update` would apply it again.
+    delete next.extends;
+    delete next.extendsHash;
     try {
       parseConfig(JSON.stringify(next));
     } catch (error) {
@@ -57,6 +70,7 @@ export async function runPreset(ctx: CommandContext, name: string, options: Pres
     if (!(await ui.confirm({ message: `Switch to the ${preset} preset?`, initial: false }))) throw new CancelledError();
   }
   await applyPlan(root, [plan]);
+  if (saved.extends !== undefined) ui.info(`This project no longer follows the team preset ${saved.extends}; run \`agent-guardrails preset use ${saved.extends}\` to follow it again.`);
   ui.success(`Switched to ${preset}. Run \`agent-guardrails update\` so the generated agent files follow (the learner preset repeats rules per agent).`);
   return 0;
 }

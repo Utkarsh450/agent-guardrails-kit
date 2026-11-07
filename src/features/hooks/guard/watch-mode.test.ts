@@ -94,6 +94,8 @@ describe("watch mode in the guard", () => {
     expect(shell("agent-guardrails alerts --notify")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
     expect(shell("agent-guardrails restore 20261107T101000000Z-aaaa --yes")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
     expect(shell("agent-guardrails checkpoints").decision).not.toBe("deny");
+    expect(shell("agent-guardrails preset use ./team.json --yes")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
+    expect(shell("agent-guardrails preset export team.json --yes")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
   });
 });
 

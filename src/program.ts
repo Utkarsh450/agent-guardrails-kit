@@ -163,11 +163,13 @@ Nothing is created or changed without showing you the plan first, and nothing is
     .option("-y, --yes", "remove without asking")
     .action(async (pattern: string, options) => run((ctx) => runAllowRemove(ctx, pattern, options))());
 
-  command("preset <name>", "Switch the guard settings to a preset: learner, balanced or team")
+  command("preset <name> [target]", "Switch the guard settings to a preset: learner, balanced or team. Or share one: 'export [file]' and 'use <file or package>'")
     .option("--stack <name>", "also change the project kind")
+    .option("--name <text>", "name written into an exported preset")
+    .option("--description <text>", "description written into an exported preset")
     .option("-y, --yes", "apply without asking")
     .option("--dry-run", "show the change and write nothing")
-    .action(async (name: string, options) => run((ctx) => runPreset(ctx, name, options))());
+    .action(async (name: string, target: string | undefined, options) => run((ctx) => runPreset(ctx, name, { ...options, target }))());
 
   command("mode [name]", "Show or change the mode: watch (log asks for a few days, blocks stay) or enforce")
     .option("--days <n>", "how long watch mode lasts, 1 to 30 (default 7)", (value) => Number.parseInt(value, 10))

@@ -7,9 +7,10 @@ import { desiredGithubFiles } from "../github/index.ts";
 import { HOOKS_PATH_COMMAND, desiredGitFiles } from "../git/index.ts";
 import { diffDependencies } from "../dependencies/index.ts";
 import type { CheckpointUsage } from "../checkpoints/index.ts";
+import { isBehind, type TeamPresetStatus } from "../team-presets/index.ts";
 import { CHECKPOINT_DIR, CHECKPOINT_LIMITS, watchActive } from "../hooks/guard/guard.mjs";
 import { AUDIT_FILE, AUDIT_MAX_BYTES, GUARD_INSTALL_PATH, STATE_GITIGNORE_LINES, guardSource, parseApprovalRecord, verifyApproval } from "../hooks/index.ts";
-import { PRESET_SUMMARY } from "../presets/index.ts";
+import { BROAD_PROGRAMS, PRESET_SUMMARY } from "../presets/index.ts";
 import { loadRules, planSync, RuleError, type SyncIo, DEFAULT_RULES_DIR } from "../rules/index.ts";
 import { SECRETS_GITIGNORE_LINES } from "../secrets/index.ts";
 import { agentChecks } from "./agents.ts";
@@ -31,10 +32,11 @@ export interface DoctorInput {
   now?: Date;
   /** How many checkpoints the guard has saved and how much they hold, or null when there are none. */
   checkpoints?: CheckpointUsage | null;
+  /** What was found when the team preset named in `extends` was read. Only given when the project has one. */
+  teamPreset?: TeamPresetStatus;
 }
 
 /** Programs that run whatever script they are given; allowing them with no arguments allows almost anything. */
-const BROAD_PROGRAMS = new Set(["sh", "bash", "zsh", "dash", "fish", "node", "python", "python3", "ruby", "perl", "php", "deno", "bun", "tsx", "ts-node", "env", "xargs", "find", "make"]);
 
 const text = (file: { content: string } | null) => file?.content ?? "";
 
@@ -85,6 +87,20 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
         add({ id: "checkpoints", area: "Guard", title: "Checkpoints", status: "warn", detail: `${used}. Close to the limit.`, fix: cleanup });
       } else {
         add({ id: "checkpoints", area: "Guard", title: "Checkpoints", status: "ok", detail: used });
+      }
+    }
+    if (config.extends !== undefined) {
+      const status = input.teamPreset;
+      if (status === undefined) {
+        add({ id: "team-preset", area: "Settings", title: "Team preset", status: "info", detail: `This project follows ${config.extends}; it was not checked.` });
+      } else if (status.state === "error") {
+        add({ id: "team-preset", area: "Settings", title: "Team preset", status: "fail", detail: `${status.source} cannot be used: ${status.error}`, fix: `Fix the source, or remove "extends" from ${CONFIG_FILE}` });
+      } else if (isBehind(config, status.settings)) {
+        add({ id: "team-preset", area: "Settings", title: "Team preset", status: "warn", detail: `The settings are behind the team preset "${status.name}" (${status.source}): applying it would add or raise something.`, fix: "agent-guardrails update" });
+      } else if (config.extendsHash !== status.hash) {
+        add({ id: "team-preset", area: "Settings", title: "Team preset", status: "warn", detail: `The team preset "${status.name}" (${status.source}) changed since it was applied. Entries it no longer lists stay in this project until you remove them.`, fix: "agent-guardrails update" });
+      } else {
+        add({ id: "team-preset", area: "Settings", title: "Team preset", status: "ok", detail: `Follows "${status.name}" (${status.source}) and is up to date.` });
       }
     }
     if (!config.approvalGate) {

@@ -68,7 +68,7 @@ If a task needs one of these, do not do it. Tell the user the exact command and 
 - **GitHub:** never run `gh` commands or call the GitHub API.
 - **Publishing and deploys:** never `npm publish`, `docker push`, deploy commands or anything that sends code to another place.
 - **Processes:** do not kill or restart a process without asking first.
-- **The guardrails' own commands:** never run `agent-guardrails init`, `update`, `sync`, `approve`, `allow`, `preset` or `ui`. They change the approval record, the allowed commands and the guardrail files, and only the user may run them. Never approve your own plan.
+- **The guardrails' own commands:** never run `agent-guardrails init`, `update`, `sync`, `approve`, `allow`, `preset`, `mode`, `alerts`, `restore` or `ui`. They change the approval record, the allowed commands and the guardrail files, and only the user may run them. Never approve your own plan.
 
 ## Stay inside this folder
 

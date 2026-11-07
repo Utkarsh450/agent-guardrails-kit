@@ -73,6 +73,8 @@ agent-guardrails test --prompt   # a prompt to test your agent for real, in a th
 | `agent-guardrails explain <reason>` | Why something was blocked, in plain words, and what to do instead. |
 | `agent-guardrails sync` | Regenerate `AGENTS.md` and the per-agent files after you edit `agent-rules/`. |
 | `agent-guardrails preset <name>` | Switch between `learner`, `balanced` and `team`. |
+| `agent-guardrails preset export [file]` | Write this project's settings as a team preset file you can share. |
+| `agent-guardrails preset use <file or package>` | Follow a team preset. Shows the change and asks first. `update` applies it again later. |
 | `agent-guardrails mode [watch\|enforce]` | Try the kit without interruptions: `watch` lets actions it would ask about run, and logs them, for up to 30 days (default 7). Blocked actions stay blocked. |
 | `agent-guardrails test` | `--hooks` proves the guard. `--prompt` and `--gap-review` print prompts to test an agent. |
 | `agent-guardrails ui` | The read-only dashboard. |
@@ -88,6 +90,28 @@ All three keep the dangerous-command blocks, ask about unknown commands, and req
 | `learner` | Logs every action and repeats the rules in each agent's own folder |
 | `balanced` (default) | The standard setup |
 | `team` | Your stack's test, build and lint commands run without asking, plus a few more read-only git commands |
+
+## Share one setup across projects
+
+A team writes its settings once and every project follows them.
+
+1. In a project set up the way the team wants, save the settings as a preset file:
+
+   ```bash
+   agent-guardrails preset export team-preset.json --name acme
+   ```
+
+2. Share the file: commit it, copy it, or publish an npm package that holds it as `guardrails-preset.json`.
+3. In any other project, follow it. The change is shown as a diff first:
+
+   ```bash
+   agent-guardrails preset use ./team-preset.json
+   ```
+
+   For a package that is already installed, use its name instead: `agent-guardrails preset use @acme/guardrails-preset`.
+4. `agent-guardrails update` applies the preset again whenever it changes, and `agent-guardrails doctor` tells you if a project fell behind.
+
+A preset can only keep or raise protection. It cannot allow unknown commands to run, switch off the plan gate or logging, set watch mode, or allow broad commands such as `bash` or `node`. A project keeps its own settings and the preset adds to them. Presets are never downloaded: they come from a file in the project or a package you installed yourself.
 
 ## How it keeps itself safe
 

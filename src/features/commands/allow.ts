@@ -4,6 +4,7 @@ import { planJsonConfig } from "../../shared/json-config.ts";
 import { evaluate, normalizeRequest } from "../hooks/guard/guard.mjs";
 import { makeContext } from "../hooks/sandbox.ts";
 import { ruleInfo } from "../explain/index.ts";
+import { BROAD_PROGRAMS } from "../presets/index.ts";
 import { diskSyncIo } from "../rules/index.ts";
 import { loadSavedConfig } from "../setup/index.ts";
 import { CancelledError, CliError } from "./errors.ts";
@@ -14,7 +15,7 @@ export interface AllowOptions {
 }
 
 /** Programs that run whatever script they are given: allowing them bare allows nearly anything. */
-const BROAD = new Set(["sh", "bash", "zsh", "dash", "fish", "node", "python", "python3", "ruby", "perl", "php", "deno", "bun", "tsx", "ts-node", "env", "xargs", "find", "make"]);
+const BROAD = BROAD_PROGRAMS;
 
 const normalize = (pattern: string) => pattern.trim().split(/\s+/).join(" ");
 

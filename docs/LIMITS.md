@@ -37,6 +37,7 @@ The guard reads the text of a command. So:
 
 - `policy: "blocklist"` lets commands the guard does not recognise run without asking. The default, `ask`, does not.
 - `approvalGate: false` turns off the plan gate.
+- **A team preset is trusted input.** `agent-guardrails preset use` reads a file in the project or an installed package, and applies it to the settings. A preset can only keep or raise protection (no `blocklist`, no plan gate off, no broad programs in `allowCommands`, only read-only git commands), the change is shown as a diff first, and nothing is downloaded. But whoever controls that file or package controls those settings, so read the diff. A project keeps its own entries and the preset adds to them: a command the team later removes from the preset stays in projects that already received it until someone removes it by hand.
 - `allowCommands` entries match any command that starts with those words, with any arguments. `"node"` alone would let an agent run any script. `agent-guardrails doctor` warns about that. The hard blocks still apply to everything you allow.
 - Bypassing a git hook with `git commit --no-verify` is possible for a person. The guard forbids it for agents.
 
