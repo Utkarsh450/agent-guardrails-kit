@@ -3,9 +3,6 @@ dist/
 *.log
 .DS_Store
 
-# Local guardrails state (audit log, approvals) never gets committed
-.agent-guardrails/
-
 # >>> agent-guardrails:state (managed block; edit outside it)
 .agent-guardrails/audit.log
 .agent-guardrails/approval.json
