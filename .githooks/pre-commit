@@ -1,0 +1,5 @@
+#!/bin/sh
+# agent-guardrails:generated pre-commit hook. Update it with `agent-guardrails update`; do not edit by hand.
+# Runs .agent-guardrails/git-checks.mjs. If Node or that file is missing, git blocks the commit.
+root="$(git rev-parse --show-toplevel)" || exit 1
+exec node "$root/.agent-guardrails/git-checks.mjs" pre-commit "$@"
