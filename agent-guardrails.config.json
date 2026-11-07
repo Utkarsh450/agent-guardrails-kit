@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "policy": "ask",
+  "allowCommands": [],
+  "gitAllow": [
+    "status",
+    "diff",
+    "log",
+    "show"
+  ],
+  "approvalGate": true,
+  "planFile": "PLAN.md",
+  "auditAllowed": false,
+  "agents": [
+    "claude"
+  ],
+  "preset": "balanced",
+  "stack": "python",
+  "alwaysRuleFiles": false,
+  "github": true
+}
