@@ -167,6 +167,13 @@ describe("init with prompts", () => {
     expect(await exists(root, "AGENTS.md")).toBe(true);
   });
 
+  it("does not offer the details step when no existing file would change", async () => {
+    const root = await project();
+    const ui = new ScriptedUi([["claude"], "balanced", "generic", true, "apply"]);
+    await run(root, ui);
+    expect(ui.offered["What next?"]).toEqual(["apply", "cancel"]);
+  });
+
   it("--yes skips the choices and uses detected or saved defaults, even in a terminal", async () => {
     const root = await project({ "CLAUDE.md": "x", "go.mod": "module x" });
     const ui = new ScriptedUi([], true);

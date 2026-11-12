@@ -26,7 +26,7 @@ export const commands = {
 
 /** Tools the guard inspects. Everything else (web, planning, subagents) does not need a process per call. */
 export const matchers = {
-  claude: "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Glob|Grep",
+  claude: "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|Read|Glob|Grep",
   claudeMcp: "mcp__.*",
   qoder: "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Glob|Grep",
   qoderMcp: "mcp__.*",

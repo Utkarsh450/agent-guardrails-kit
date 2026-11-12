@@ -119,7 +119,7 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
   const guard = await read(GUARD_INSTALL_PATH);
   if (guard === null || guard.kind !== "file") {
     add({ id: "guard", area: "Guard", title: "Guard script", status: "fail", detail: `${GUARD_INSTALL_PATH} does not exist, so no agent is checked.`, fix: "agent-guardrails init" });
-  } else if (guard.content === guardSource) {
+  } else if (guard.content === guardSource.replaceAll("\r\n", "\n")) {
     add({ id: "guard", area: "Guard", title: "Guard script", status: "ok", detail: "Installed and identical to this version of the kit." });
   } else if (isGenerated(guard.content)) {
     add({ id: "guard", area: "Guard", title: "Guard script", status: "warn", detail: "It differs from this version of the kit: either it is older or someone edited it.", fix: "agent-guardrails update" });

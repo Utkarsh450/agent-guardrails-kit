@@ -9,6 +9,12 @@ export const HOOKS_DIR = ".githooks";
 /** The one setting a person must make in each clone (agents are not allowed to run `git config`). */
 export const HOOKS_PATH_COMMAND = `git config core.hooksPath ${HOOKS_DIR}`;
 
+/**
+ * Hook scripts must keep LF line endings. A Windows clone with core.autocrlf would otherwise turn them into CRLF,
+ * and `sh` cannot run a script whose first line is `#!/bin/sh` followed by a carriage return.
+ */
+export const GITATTRIBUTES_LINES: readonly string[] = [`${HOOKS_DIR}/* text eol=lf`, ".agent-guardrails/*.mjs text eol=lf"];
+
 export type HookName = "pre-commit" | "pre-push";
 
 /**
@@ -44,7 +50,8 @@ export async function planGitFiles(read: ReadExisting): Promise<PlannedFile[]> {
     ],
     read,
   );
-  return [...files, gitignore];
+  const gitattributes = await planTextBlocks(".gitattributes", [{ id: "line-endings", lines: GITATTRIBUTES_LINES }], read);
+  return [...files, gitignore, gitattributes];
 }
 
 /** True when the text of .git/config sets core.hooksPath to the kit's hooks folder. */

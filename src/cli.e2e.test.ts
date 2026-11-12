@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises"
 import os from "node:os";
 import path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
+import { posixShell } from "../tests/helpers/shell.ts";
 
 /**
  * Drives the real built CLI (dist/cli.mjs) as a separate process against throwaway projects, the way a person
@@ -120,7 +121,7 @@ describe("the installed protection really works", () => {
     const settings = JSON.parse(await read(dir, ".claude/settings.json"));
     const command = settings.hooks.PreToolUse[0].hooks[0].command as string;
     const hook = (cmd: string) =>
-      spawnSync("/bin/sh", ["-c", command], { cwd: dir, encoding: "utf8", env: { ...env, CLAUDE_PROJECT_DIR: dir }, input: JSON.stringify({ tool_name: "Bash", tool_input: { command: cmd }, cwd: dir }) });
+      spawnSync(posixShell(), ["-c", command], { cwd: dir, encoding: "utf8", env: { ...env, CLAUDE_PROJECT_DIR: dir }, input: JSON.stringify({ tool_name: "Bash", tool_input: { command: cmd }, cwd: dir }) });
     expect(hook("rm -rf x").status).toBe(2);
     expect(hook("git push").status).toBe(2);
     expect(hook("git status").status).toBe(0);
@@ -192,7 +193,7 @@ describe("agents cannot use the CLI to widen their own permissions", () => {
     const settings = JSON.parse(await read(dir, ".claude/settings.json"));
     const command = settings.hooks.PreToolUse[0].hooks[0].command as string;
     const hook = (cmd: string) =>
-      spawnSync("/bin/sh", ["-c", command], { cwd: dir, encoding: "utf8", env: { ...env, CLAUDE_PROJECT_DIR: dir }, input: JSON.stringify({ tool_name: "Bash", tool_input: { command: cmd }, cwd: dir }) });
+      spawnSync(posixShell(), ["-c", command], { cwd: dir, encoding: "utf8", env: { ...env, CLAUDE_PROJECT_DIR: dir }, input: JSON.stringify({ tool_name: "Bash", tool_input: { command: cmd }, cwd: dir }) });
     for (const cmd of ["agent-guardrails approve --yes", "npx agent-guardrails-kit approve -y", "pnpm dlx agent-guardrails-kit allow add node", "agent-guardrails --cwd . init --yes"]) {
       const out = hook(cmd);
       expect(out.status, cmd).toBe(2);
@@ -225,7 +226,7 @@ describe("approve", () => {
     const settings = JSON.parse(await read(dir, ".claude/settings.json"));
     const command = settings.hooks.PreToolUse[0].hooks[0].command as string;
     const write = () =>
-      spawnSync("/bin/sh", ["-c", command], { cwd: dir, encoding: "utf8", env: { ...env, CLAUDE_PROJECT_DIR: dir }, input: JSON.stringify({ tool_name: "Write", tool_input: { file_path: path.join(dir, "src/a.ts"), content: "x" }, cwd: dir }) }).status;
+      spawnSync(posixShell(), ["-c", command], { cwd: dir, encoding: "utf8", env: { ...env, CLAUDE_PROJECT_DIR: dir }, input: JSON.stringify({ tool_name: "Write", tool_input: { file_path: path.join(dir, "src/a.ts"), content: "x" }, cwd: dir }) }).status;
     expect(write()).toBe(0);
     await writeFile(path.join(dir, "PLAN.md"), "# Plan\n- build the thing\n- and something sneaky\n", "utf8");
     expect(run(dir, ["approve", "--status"]).code).toBe(1);
@@ -310,7 +311,7 @@ describe("report and explain", () => {
     const command = settings.hooks.PreToolUse[0].hooks[0].command as string;
     const guardEnv = { ...env, CLAUDE_PROJECT_DIR: dir, AGENT_GUARDRAILS_NO_AUDIT: "0" };
     for (const cmd of ["rm -rf x", "git push origin main", "python script.py"]) {
-      spawnSync("/bin/sh", ["-c", command], { cwd: dir, env: guardEnv, input: JSON.stringify({ tool_name: "Bash", tool_input: { command: cmd }, cwd: dir }) });
+      spawnSync(posixShell(), ["-c", command], { cwd: dir, env: guardEnv, input: JSON.stringify({ tool_name: "Bash", tool_input: { command: cmd }, cwd: dir }) });
     }
     const report = run(dir, ["report"]);
     expect(report.code).toBe(0);
@@ -377,7 +378,13 @@ describe("ui (the read-only dashboard)", () => {
 
     const exit = new Promise<number | null>((resolve) => child.on("close", (code) => resolve(code)));
     child.kill("SIGINT");
-    expect(await exit).toBe(0);
+    const code = await exit;
+    // Windows cannot send Ctrl+C from a script: the signal ends the process on the spot, with no goodbye message.
+    if (process.platform === "win32") {
+      expect(code === 0 || code === null).toBe(true);
+      return;
+    }
+    expect(code).toBe(0);
     expect(output).toContain("Dashboard stopped.");
   }, 60_000);
 

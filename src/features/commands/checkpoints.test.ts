@@ -64,7 +64,8 @@ describe("agent-guardrails checkpoints", () => {
     await expect(runCheckpoints({ cwd: root, ui: new ScriptedUi([], false) }, ID_A)).rejects.toThrow(/No checkpoint/);
   });
 
-  it("removes control characters from file names", async () => {
+  // Windows cannot create a file name with a control character, so there is nothing to show there.
+  it.skipIf(process.platform === "win32")("removes control characters from file names", async () => {
     const root = await tempProject();
     await makeCheckpoint(root, ID_A, [{ path: `src/${ESC}[2Jevil.ts`, existed: true, content: "x" }]);
     const ui = new ScriptedUi([], false);

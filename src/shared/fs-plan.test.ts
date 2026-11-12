@@ -1,5 +1,9 @@
+import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  diskReadExisting,
   GENERATED_MARKER,
   isGenerated,
   normalizeRelPath,
@@ -22,6 +26,17 @@ describe("normalizeRelPath", () => {
       expect(() => normalizeRelPath(bad)).toThrow();
     },
   );
+});
+
+describe("a project checked out with CRLF line endings (Windows, core.autocrlf)", () => {
+  it("plans a generated file as unchanged when only the line endings differ", async () => {
+    const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "agent-guardrails-crlf-")));
+    const content = `${GENERATED_MARKER}\n# Rules\nline two\n`;
+    await mkdir(path.join(root, "docs"), { recursive: true });
+    await writeFile(path.join(root, "docs", "a.md"), content.replaceAll("\n", "\r\n"), "utf8");
+    const [file] = await planFiles([{ path: "docs/a.md", content, generated: true }], diskReadExisting(root));
+    expect(file?.status).toBe("unchanged");
+  });
 });
 
 describe("planFiles", () => {

@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { hasPosixShell, posixShell } from "../../../tests/helpers/shell.ts";
 import { guardSource } from "../hooks/install.ts";
 import { GUARD_PATH, commands } from "./constants.ts";
 
@@ -34,7 +35,7 @@ interface Run {
 }
 
 function runHook({ command, cwd, payload, env = {} }: Run) {
-  const result = spawnSync("/bin/sh", ["-c", command], {
+  const result = spawnSync(posixShell(), ["-c", command], {
     cwd,
     input: JSON.stringify(payload),
     encoding: "utf8",
@@ -45,7 +46,7 @@ function runHook({ command, cwd, payload, env = {} }: Run) {
 
 const bash = (command: string, cwd: string) => ({ tool_name: "Bash", tool_input: { command }, cwd });
 
-describe.skipIf(process.platform === "win32")("hook command lines, run through a real shell", () => {
+describe.skipIf(!hasPosixShell)("hook command lines, run through a real shell", () => {
   describe("Claude Code", () => {
     it("blocks a dangerous command and lets a safe one through", async () => {
       const root = await project();

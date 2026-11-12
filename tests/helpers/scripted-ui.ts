@@ -9,6 +9,8 @@ type Answer = string | string[] | boolean | ((prompt: string) => string | string
 export class ScriptedUi implements Ui {
   readonly lines: string[] = [];
   readonly prompts: string[] = [];
+  /** The values each select offered, by prompt text. */
+  readonly offered: Record<string, string[]> = {};
   private queue: Answer[];
 
   constructor(
@@ -43,6 +45,7 @@ export class ScriptedUi implements Ui {
   error = (message: string) => this.log("ERROR: ", message);
 
   async select<T extends string>({ message, choices }: { message: string; choices: readonly Choice<T>[]; initial?: T }): Promise<T> {
+    this.offered[message] = choices.map((c) => c.value);
     const answer = this.next(message) as T;
     if (!choices.some((c) => c.value === answer)) throw new Error(`"${answer}" is not a choice for: ${message}`);
     return answer;

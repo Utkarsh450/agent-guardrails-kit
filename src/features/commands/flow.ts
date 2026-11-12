@@ -37,11 +37,12 @@ export async function reviewAndApply(ui: Ui, root: string, plan: SetupPlan, opti
         throw new CliError("This would change files. Read the plan above, then run again with --yes to apply it (or --dry-run to only look).");
       }
       for (;;) {
-        const choice = await ui.select({
+        const choice = await ui.select<"apply" | "details" | "cancel">({
           message: "What next?",
           choices: [
             { value: "apply", label: "Apply these changes" },
-            { value: "details", label: "Show what changes inside existing files first" },
+            // With no existing file to compare, this choice would print nothing and ask again, which looks like a broken prompt.
+            ...(counts.update > 0 ? [{ value: "details" as const, label: "Show what changes inside existing files first" }] : []),
             { value: "cancel", label: "Cancel (nothing is changed)" },
           ],
           initial: "apply",

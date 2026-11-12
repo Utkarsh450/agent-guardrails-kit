@@ -176,7 +176,7 @@ A preset can only keep or raise protection. It cannot allow unknown commands to 
 
 ## Requirements
 
-Node 22.12 or newer and git. Works with npm, pnpm and bun (the CLI also runs under the Bun runtime). Tested by hand on macOS. Linux is covered by this repository's CI workflow. Windows is not supported yet (see [limits](docs/LIMITS.md)).
+Node 22.12 or newer and git. Works with npm, pnpm and bun (the CLI also runs under the Bun runtime). Tested by hand on macOS and on Windows 11. Linux is covered by this repository's CI workflow. On Windows you need [Git for Windows](https://git-scm.com/download/win) (Git Bash): Claude Code and the git hooks run the guard through it. See [limits](docs/LIMITS.md) for what is not covered on Windows.
 
 ## Troubleshooting
 

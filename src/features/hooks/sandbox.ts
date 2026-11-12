@@ -30,6 +30,7 @@ export function fakeFs(files: Record<string, string> = {}): FakeFs {
   }
   const appended: string[] = [];
   return {
+    pathFlavour: "posix",
     files: map,
     appended,
     existsSync: (p) => map.has(p) || dirs.has(p),

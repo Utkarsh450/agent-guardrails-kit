@@ -53,7 +53,9 @@ The audit log (`.agent-guardrails/audit.log`) and the dashboard stay on your mac
 
 - **macOS** is tested by hand, with Node and with the Bun runtime.
 - **Linux** is covered by this repository's CI workflow (`.github/workflows/ci.yml`).
-- **Windows is not supported yet.** The hook commands and git hooks use POSIX shell syntax. They may work under Git Bash, but nobody has checked. The CI workflow runs Windows as an experiment that is allowed to fail.
+- **Windows works through Git Bash, with gaps.** The hook commands and git hooks use POSIX shell syntax, so Git for Windows must be installed. The unit tests, the hook commands run through Git Bash (including a project path with spaces, and failing closed when the guard or Node is missing) and real git hooks pass on Windows 11. Not covered: Windows with no Git Bash, `cmd.exe` as the hook shell, and `agent-guardrails alerts --notify` (desktop notifications are macOS and Linux only).
+- **The PowerShell tool is checked, but only partly PowerShell-aware.** The guard reads PowerShell commands with its shell rules, after turning `\` into `/`. `git push`, `gh`, `rm` and `Remove-Item` are blocked, and read-only commands (`Get-Content`, `Get-ChildItem`, `Select-String`, `Set-Location` and their aliases) run inside the project with the same path and secret checks as `cat` and `ls`. Every other cmdlet is an unknown program and asks, and PowerShell syntax such as script blocks is not analysed. Claude Code's `permissions.deny` rules written by `init` name `Bash(...)` only; the hook is the protection for PowerShell.
+- **Windows paths.** The guard compares paths without regard to letter case, expands short names such as `UTKARS~1`, and reads Git Bash paths (`/c/Users/...`) as drive paths. Hook scripts are kept LF by a `.gitattributes` block `init` writes, because a CRLF hook cannot run under `sh`.
 - Other runtimes than Node and Bun are not tested.
 
 ## Other things to know
