@@ -76,11 +76,15 @@ describe("the documentation matches the program", () => {
 });
 
 describe("the package is ready to publish", () => {
-  it("ships only the built CLI, under both command names, and is still protected from accidental publishing", () => {
+  it("ships only the built CLI under one command name, and its release flags are consistent", () => {
     expect(pkg.files).toEqual(["dist/cli.mjs"]);
     expect(pkg.bin).toEqual({ "agent-guardrails-kit": "dist/cli.mjs" });
-    expect(pkg.private).toBe(true);
-    expect(pkg.version).toBe("0.0.0");
+    // Either the unreleased state (private, 0.0.0, so it cannot be published by accident) or a released one
+    // (no "private" flag, a real version). A half-way state would either block the release or allow a 0.0.0 publish.
+    const flags = pkg as { private?: boolean; version: string };
+    expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
+    if (flags.private === true) expect(pkg.version).toBe("0.0.0");
+    else expect(pkg.version).not.toBe("0.0.0");
     expect(pkg.scripts.prepublishOnly).toBe("npm run typecheck && npm run test && npm run build");
     expect(pkg.license).toBe("MIT");
     expect(pkg.description.length).toBeGreaterThan(40);
