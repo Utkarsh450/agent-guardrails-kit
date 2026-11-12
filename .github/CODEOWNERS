@@ -4,12 +4,12 @@
 # With branch protection's "Require review from Code Owners" turned on, changes to the files below
 # cannot be merged without that person's approval. They are the files that keep AI agents in check.
 #
-# /.agent-guardrails/            @your-github-username
-# /.githooks/                    @your-github-username
-# /.github/workflows/            @your-github-username
-# /agent-rules/                  @your-github-username
-# /agent-guardrails.config.json  @your-github-username
-# /.claude/settings.json         @your-github-username
-# /.cursor/hooks.json            @your-github-username
-# /.codex/                       @your-github-username
-# /.qoder/settings.json          @your-github-username
+# /.agent-guardrails/            @utkarsh450-github-username
+# /.githooks/                    @utkarsh450-username
+# /.github/workflows/            @utkarsh450-username
+# /agent-rules/                  @utkarsh450-username
+# /agent-guardrails.config.json  @utkarsh450-username
+# /.claude/settings.json         @utkarsh450-username
+# /.cursor/hooks.json            @utkarsh450-username
+# /.codex/                       @utkarsh450-username
+# /.qoder/settings.json          @utkarsh450-username
