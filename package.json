@@ -16,7 +16,6 @@
     "cli"
   ],
   "type": "module",
-  "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
