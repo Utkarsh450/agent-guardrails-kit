@@ -10,9 +10,23 @@ It sets up shared rules every agent reads, hooks that block dangerous actions, g
 
 You need Node 22.12 or newer and git.
 
-### Install from GitHub (works today)
+### Run it from npm
 
-The package is not on npm yet, so build it from this repository first. You do this once.
+In **your own project folder**, with nothing to clone or build:
+
+```bash
+npx agent-guardrails-kit init
+```
+
+`pnpm dlx agent-guardrails-kit init` and `bunx agent-guardrails-kit init` do the same. To type the shorter `agent-guardrails-kit doctor` and the other commands later, install it once:
+
+```bash
+npm install -g agent-guardrails-kit
+```
+
+### Build it from source (to try changes)
+
+The package is on npm. Use this only if you want to run the code from this repository.
 
 | Step | Command | What it does |
 |---|---|---|
@@ -33,22 +47,6 @@ Replace `/path/to/agent-guardrails-kit` with the folder you cloned. To type `age
 alias agent-guardrails-kit="node /path/to/agent-guardrails-kit/dist/cli.mjs"
 ```
 
-### After it is published to npm
-
-Not available yet. When the package is published, this will work in your project folder, with no clone or build:
-
-```bash
-npx agent-guardrails-kit init
-```
-
-```bash
-pnpm dlx agent-guardrails-kit init
-```
-
-```bash
-bunx agent-guardrails-kit init
-```
-
 ### What `init` does
 
 It asks which agents you use and how strict to be, shows you the full list of files it would create, and waits for your yes. Then:
@@ -59,7 +57,7 @@ agent-guardrails-kit test --hooks    # proves the guard blocks what it should
 agent-guardrails-kit test --prompt   # a prompt to test your agent for real, in a throwaway copy
 ```
 
-(`agent-guardrails-kit` works as the command name too.)
+If you only used `npx`, put `npx` in front of each command, or install it once with `npm install -g agent-guardrails-kit`.
 
 ## Try it safely first
 
