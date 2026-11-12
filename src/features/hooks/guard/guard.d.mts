@@ -36,6 +36,8 @@ export interface Decision {
 }
 
 export interface GuardFs {
+  /** Which path rules the file system's paths follow. Leave it out to use the machine's own. */
+  pathFlavour?: "posix" | "win32";
   existsSync(path: string): boolean;
   readFileSync(path: string, encoding: "utf8"): string;
   realpathSync(path: string): string;

@@ -99,6 +99,6 @@ describe("gapReviewPrompt", () => {
     expect(prompt).toMatch(/Which of the agents used here are only advisory/);
     expect(prompt).toMatch(/never values/);
     expect(prompt).toContain("```\n[FAIL] guard\n```");
-    expect(gapReviewPrompt()).toMatch(/Run `agent-guardrails doctor` yourself/);
+    expect(gapReviewPrompt()).toMatch(/Run `agent-guardrails-kit doctor` yourself/);
   });
 });

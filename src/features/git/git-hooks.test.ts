@@ -3,8 +3,9 @@ import { mkdir, mkdtemp, readFile, realpath, stat, writeFile } from "node:fs/pro
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { hasPosixShell } from "../../../tests/helpers/shell.ts";
 import { applyPlan, diskReadExisting } from "../../shared/fs-plan.ts";
-import { GIT_CHECKS_PATH, HOOKS_PATH_COMMAND, hookScript, isHooksPathConfigured, planGitFiles } from "./hooks.ts";
+import { GITATTRIBUTES_LINES, GIT_CHECKS_PATH, HOOKS_PATH_COMMAND, hookScript, isHooksPathConfigured, planGitFiles } from "./hooks.ts";
 
 /**
  * These tests run real git, but only inside throwaway folders under the system temp directory
@@ -13,6 +14,21 @@ import { GIT_CHECKS_PATH, HOOKS_PATH_COMMAND, hookScript, isHooksPathConfigured,
  */
 
 const hasGit = spawnSync("git", ["--version"]).status === 0;
+
+describe("line endings", () => {
+  it("keeps hook scripts LF in every clone, so sh can run them on Windows", async () => {
+    const planned = await planGitFiles(async () => null);
+    const attributes = planned.find((file) => file.path === ".gitattributes");
+    expect(attributes?.status).toBe("create");
+    for (const line of GITATTRIBUTES_LINES) expect(attributes?.content).toContain(line);
+    expect(GITATTRIBUTES_LINES).toContain(".githooks/* text eol=lf");
+  });
+
+  it("generates hook scripts with LF line endings only", () => {
+    expect(hookScript("pre-commit")).not.toContain("\r");
+    expect(hookScript("pre-push")).not.toContain("\r");
+  });
+});
 
 // Assembled at run time so this file never holds something that looks like a real credential.
 const j = (...parts: string[]) => parts.join("");
@@ -77,12 +93,13 @@ async function makeRemote(repo: Repo): Promise<string> {
   return remote;
 }
 
-describe.skipIf(!hasGit || process.platform === "win32")("git hooks, run by real git", () => {
+describe.skipIf(!hasGit || !hasPosixShell)("git hooks, run by real git", () => {
   describe("installation", () => {
     it("writes executable hooks and the checks, and a .gitignore that really ignores secrets", async () => {
       const { root, git } = await makeRepo();
       for (const hook of [".githooks/pre-commit", ".githooks/pre-push", GIT_CHECKS_PATH]) {
-        expect((await stat(path.join(root, hook))).mode & 0o111, hook).not.toBe(0);
+        // Windows has no execute permission bit; Git for Windows runs hooks by reading their first line.
+        if (process.platform !== "win32") expect((await stat(path.join(root, hook))).mode & 0o111, hook).not.toBe(0);
       }
       const ignore = await readFile(path.join(root, ".gitignore"), "utf8");
       expect(ignore).toContain(".agent-guardrails/audit.log");

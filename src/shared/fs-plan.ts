@@ -77,7 +77,8 @@ export async function planFiles(
     seen.add(rel);
 
     const existing = await readExisting(rel);
-    const base = { ...file, path: rel };
+    // What the kit writes is always LF. (Embedded files can arrive with CRLF when the source was checked out on Windows.)
+    const base = { ...file, content: file.content.replaceAll("\r\n", "\n"), path: rel };
 
     if (existing === null) {
       planned.push({ ...base, status: "create", existing: null, reason: null });
@@ -95,7 +96,7 @@ export async function planFiles(
         existing: null,
         reason: "exists and is not a regular file",
       });
-    } else if (existing.content === file.content) {
+    } else if (existing.content === base.content) {
       // Same text, but a hook that lost its execute bit must be fixed, so that counts as an update.
       const needsChmod = file.executable === true && existing.executable === false;
       planned.push({ ...base, status: needsChmod ? "update" : "unchanged", existing: existing.content, reason: null });
@@ -138,7 +139,9 @@ export function diskReadExisting(root: string): ReadExisting {
     if (!info.isFile()) return { kind: "other", content: "" };
     return {
       kind: "file",
-      content: await readFile(abs, "utf8"),
+      // Line endings do not count. A Windows checkout (git core.autocrlf) turns LF into CRLF, and that must not make
+      // every generated file look "out of date".
+      content: (await readFile(abs, "utf8")).replaceAll("\r\n", "\n"),
       ...(process.platform === "win32" ? {} : { executable: (info.mode & 0o111) !== 0 }),
     };
   };

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { hashPlan } from "./guard/guard.mjs";
 
 /**
- * The approval record the human creates with `agent-guardrails approve`.
+ * The approval record the human creates with `agent-guardrails-kit approve`.
  * The guard blocks file writes until a record exists whose hash matches the current plan file,
  * so editing the plan after approving it cancels the approval.
  */

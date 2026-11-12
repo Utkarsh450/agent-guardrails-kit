@@ -129,5 +129,5 @@ jobs:
           npx agent-guardrails-kit --version
           mkdir project && cd project
           git init -q
-          npx agent-guardrails init --agents claude --yes --git-config
-          npx agent-guardrails doctor --ci
+          npx agent-guardrails-kit init --agents claude --yes --git-config
+          npx agent-guardrails-kit doctor --ci

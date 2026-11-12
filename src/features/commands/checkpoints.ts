@@ -21,7 +21,7 @@ function summaryLine(manifest: Manifest): string {
 }
 
 /**
- * `agent-guardrails checkpoints [id]`: lists the file copies the guard saved before agents changed files, or shows
+ * `agent-guardrails-kit checkpoints [id]`: lists the file copies the guard saved before agents changed files, or shows
  * what one checkpoint holds. Reads only.
  */
 export async function runCheckpoints(ctx: CommandContext, id?: string, options: CheckpointsOptions = {}): Promise<number> {
@@ -29,7 +29,7 @@ export async function runCheckpoints(ctx: CommandContext, id?: string, options: 
   const root = findProjectRoot(ctx.cwd);
 
   if (id !== undefined) {
-    if (!CHECKPOINT_ID.test(id)) throw new CliError(`"${cleanText(id, 40)}" is not a checkpoint id. List them with: agent-guardrails checkpoints`);
+    if (!CHECKPOINT_ID.test(id)) throw new CliError(`"${cleanText(id, 40)}" is not a checkpoint id. List them with: agent-guardrails-kit checkpoints`);
     const manifest = await readCheckpoint(root, id);
     if (manifest === null) throw new CliError(`No checkpoint ${id} was found.`);
     ui.print(`Checkpoint ${manifest.id}`);
@@ -38,7 +38,7 @@ export async function runCheckpoints(ctx: CommandContext, id?: string, options: 
       const state = !file.existed ? "did not exist (the agent created it)" : file.skipped ? `not saved: ${SKIP_REASONS[file.skipped]}` : `saved, ${kb(file.bytes)}`;
       ui.print(`  ${cleanText(file.path, 120)}: ${state}`);
     }
-    ui.print(`\nPut the saved files back with: agent-guardrails restore ${manifest.id}`);
+    ui.print(`\nPut the saved files back with: agent-guardrails-kit restore ${manifest.id}`);
     return 0;
   }
 
@@ -55,6 +55,6 @@ export async function runCheckpoints(ctx: CommandContext, id?: string, options: 
   if (usage !== null) {
     ui.print(`\n${usage.count} saved (limit ${CHECKPOINT_LIMITS.maxCount}), ${kb(usage.bytes)} of ${kb(CHECKPOINT_LIMITS.maxTotalBytes)} used.`);
   }
-  ui.print("See one with: agent-guardrails checkpoints <id>     Put it back with: agent-guardrails restore <id>");
+  ui.print("See one with: agent-guardrails-kit checkpoints <id>     Put it back with: agent-guardrails-kit restore <id>");
   return 0;
 }

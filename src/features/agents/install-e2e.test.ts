@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises"
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { hasPosixShell, posixShell } from "../../../tests/helpers/shell.ts";
 import { AGENT_IDS } from "../../shared/agents.ts";
 import { applyPlan, diskReadExisting, type PlannedFile } from "../../shared/fs-plan.ts";
 import { planGitFiles } from "../git/index.ts";
@@ -43,7 +44,7 @@ async function installAll(userFiles: Record<string, string> = {}) {
 const bash = (command: string, cwd: string) => ({ tool_name: "Bash", tool_input: { command }, cwd });
 
 function run(command: string, cwd: string, payload: unknown, env: Record<string, string>) {
-  const result = spawnSync("/bin/sh", ["-c", command], {
+  const result = spawnSync(posixShell(), ["-c", command], {
     cwd,
     input: JSON.stringify(payload),
     encoding: "utf8",
@@ -56,7 +57,7 @@ async function hookCommand(root: string, file: string, pick: (config: any) => st
   return pick(JSON.parse(await readFile(path.join(root, file), "utf8")));
 }
 
-describe.skipIf(process.platform === "win32")("install into a project, then run what was written", () => {
+describe.skipIf(!hasPosixShell)("install into a project, then run what was written", () => {
   it("writes every expected file and reports no conflicts in a fresh project", async () => {
     const { all } = await installAll();
     expect(all.filter((file) => file.status === "conflict")).toEqual([]);

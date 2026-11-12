@@ -29,7 +29,7 @@ const POLL_MS = 500;
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
- * `agent-guardrails alerts`: follows the audit log in a spare terminal tab and prints each new blocked or asked
+ * `agent-guardrails-kit alerts`: follows the audit log in a spare terminal tab and prints each new blocked or asked
  * action as it happens. Reads only; it never writes to the log or changes any file. Stop it with Ctrl+C.
  * The guard hook itself is not involved: this only reads what the guard already wrote.
  */

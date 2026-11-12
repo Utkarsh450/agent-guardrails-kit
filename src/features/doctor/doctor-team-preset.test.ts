@@ -53,7 +53,7 @@ describe("doctor and a team preset", () => {
     const result = await check({ ...follows(settings), allowCommands: ["pnpm test"] }, ok(settings));
     expect(result?.status).toBe("warn");
     expect(result?.detail).toMatch(/behind the team preset "acme"/);
-    expect(result?.fix).toBe("agent-guardrails update");
+    expect(result?.fix).toBe("agent-guardrails-kit update");
   });
 
   it("warns when the preset changed, even if there is nothing to add", async () => {

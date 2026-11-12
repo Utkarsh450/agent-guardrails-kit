@@ -51,7 +51,7 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
   let config: GuardrailsConfig | null = null;
   const configFile = await read(CONFIG_FILE);
   if (configFile === null) {
-    add({ id: "config", area: "Settings", title: "Settings file", status: "fail", detail: `${CONFIG_FILE} does not exist. Without it the guard uses its built-in defaults and nothing remembers your choices.`, fix: "agent-guardrails init" });
+    add({ id: "config", area: "Settings", title: "Settings file", status: "fail", detail: `${CONFIG_FILE} does not exist. Without it the guard uses its built-in defaults and nothing remembers your choices.`, fix: "agent-guardrails-kit init" });
   } else {
     try {
       config = parseConfig(text(configFile));
@@ -69,8 +69,8 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
     if (config.mode === "watch") {
       add(
         watchActive(config, input.now ?? new Date())
-          ? { id: "watch", area: "Settings", title: "Watch mode", status: "warn", detail: `Watch mode is on until ${config.watchUntil}: actions the guard would ask about run without asking and are logged. Blocked actions are still blocked.`, fix: "agent-guardrails mode enforce" }
-          : { id: "watch", area: "Settings", title: "Watch mode", status: "info", detail: 'mode is "watch" but there is no valid end date within the next 30 days, so the guard is enforcing.', fix: "agent-guardrails mode enforce" },
+          ? { id: "watch", area: "Settings", title: "Watch mode", status: "warn", detail: `Watch mode is on until ${config.watchUntil}: actions the guard would ask about run without asking and are logged. Blocked actions are still blocked.`, fix: "agent-guardrails-kit mode enforce" }
+          : { id: "watch", area: "Settings", title: "Watch mode", status: "info", detail: 'mode is "watch" but there is no valid end date within the next 30 days, so the guard is enforcing.', fix: "agent-guardrails-kit mode enforce" },
       );
     }
     if (!config.checkpoints) {
@@ -96,9 +96,9 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
       } else if (status.state === "error") {
         add({ id: "team-preset", area: "Settings", title: "Team preset", status: "fail", detail: `${status.source} cannot be used: ${status.error}`, fix: `Fix the source, or remove "extends" from ${CONFIG_FILE}` });
       } else if (isBehind(config, status.settings)) {
-        add({ id: "team-preset", area: "Settings", title: "Team preset", status: "warn", detail: `The settings are behind the team preset "${status.name}" (${status.source}): applying it would add or raise something.`, fix: "agent-guardrails update" });
+        add({ id: "team-preset", area: "Settings", title: "Team preset", status: "warn", detail: `The settings are behind the team preset "${status.name}" (${status.source}): applying it would add or raise something.`, fix: "agent-guardrails-kit update" });
       } else if (config.extendsHash !== status.hash) {
-        add({ id: "team-preset", area: "Settings", title: "Team preset", status: "warn", detail: `The team preset "${status.name}" (${status.source}) changed since it was applied. Entries it no longer lists stay in this project until you remove them.`, fix: "agent-guardrails update" });
+        add({ id: "team-preset", area: "Settings", title: "Team preset", status: "warn", detail: `The team preset "${status.name}" (${status.source}) changed since it was applied. Entries it no longer lists stay in this project until you remove them.`, fix: "agent-guardrails-kit update" });
       } else {
         add({ id: "team-preset", area: "Settings", title: "Team preset", status: "ok", detail: `Follows "${status.name}" (${status.source}) and is up to date.` });
       }
@@ -118,13 +118,13 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
   // ── Guard ──
   const guard = await read(GUARD_INSTALL_PATH);
   if (guard === null || guard.kind !== "file") {
-    add({ id: "guard", area: "Guard", title: "Guard script", status: "fail", detail: `${GUARD_INSTALL_PATH} does not exist, so no agent is checked.`, fix: "agent-guardrails init" });
-  } else if (guard.content === guardSource) {
+    add({ id: "guard", area: "Guard", title: "Guard script", status: "fail", detail: `${GUARD_INSTALL_PATH} does not exist, so no agent is checked.`, fix: "agent-guardrails-kit init" });
+  } else if (guard.content === guardSource.replaceAll("\r\n", "\n")) {
     add({ id: "guard", area: "Guard", title: "Guard script", status: "ok", detail: "Installed and identical to this version of the kit." });
   } else if (isGenerated(guard.content)) {
-    add({ id: "guard", area: "Guard", title: "Guard script", status: "warn", detail: "It differs from this version of the kit: either it is older or someone edited it.", fix: "agent-guardrails update" });
+    add({ id: "guard", area: "Guard", title: "Guard script", status: "warn", detail: "It differs from this version of the kit: either it is older or someone edited it.", fix: "agent-guardrails-kit update" });
   } else {
-    add({ id: "guard", area: "Guard", title: "Guard script", status: "fail", detail: `${GUARD_INSTALL_PATH} is not the kit's guard.`, fix: "agent-guardrails update (or move the file away first)" });
+    add({ id: "guard", area: "Guard", title: "Guard script", status: "fail", detail: `${GUARD_INSTALL_PATH} is not the kit's guard.`, fix: "agent-guardrails-kit update (or move the file away first)" });
   }
   const major = Number(/^v?(\d+)/.exec(input.nodeVersion)?.[1] ?? 0);
   add(
@@ -137,13 +137,13 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
   const detected = await detectAgents(read);
   const agents: AgentId[] = config?.agents.length ? config.agents : detected.map((d) => d.agent);
   if (agents.length === 0) {
-    add({ id: "agents", area: "Agents", title: "Agents", status: "warn", detail: "No agents are set up and none were found in this folder.", fix: "agent-guardrails init" });
+    add({ id: "agents", area: "Agents", title: "Agents", status: "warn", detail: "No agents are set up and none were found in this folder.", fix: "agent-guardrails-kit init" });
   }
   for (const agent of agents) {
     for (const check of await agentChecks(agent, read, { antigravityUserSettings: input.antigravityUserSettings ?? null })) add(check);
   }
   for (const found of detected.filter((d) => !agents.includes(d.agent))) {
-    add({ id: `agent.${found.agent}.unprotected`, area: "Agents", title: `${AGENT_LABELS[found.agent]} is used here but not protected`, status: "warn", detail: `Found ${found.evidence.join(", ")}, but ${AGENT_LABELS[found.agent]} is not set up.`, fix: `agent-guardrails init --agents ${[...agents, found.agent].join(",")}` });
+    add({ id: `agent.${found.agent}.unprotected`, area: "Agents", title: `${AGENT_LABELS[found.agent]} is used here but not protected`, status: "warn", detail: `Found ${found.evidence.join(", ")}, but ${AGENT_LABELS[found.agent]} is not set up.`, fix: `agent-guardrails-kit init --agents ${[...agents, found.agent].join(",")}` });
   }
 
   // ── Rules ──
@@ -153,14 +153,14 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
     rulesOk = true;
     add({ id: "rules", area: "Rules", title: "Rule sources", status: "ok", detail: `${rules.filter((r) => r.scope === "always").length} always-on and ${rules.filter((r) => r.scope === "scoped").length} scoped rules in ${DEFAULT_RULES_DIR}/.` });
   } catch (error) {
-    add({ id: "rules", area: "Rules", title: "Rule sources", status: "fail", detail: error instanceof RuleError ? error.message : String(error), fix: "agent-guardrails init" });
+    add({ id: "rules", area: "Rules", title: "Rule sources", status: "fail", detail: error instanceof RuleError ? error.message : String(error), fix: "agent-guardrails-kit init" });
   }
   if (rulesOk && agents.length > 0) {
     try {
       const sync = await planSync(io, { agents, alwaysRuleFiles: config?.alwaysRuleFiles ?? false });
       const stale = sync.files.filter((f) => f.status === "create" || f.status === "update");
       if (stale.length > 0) {
-        add({ id: "rules.sync", area: "Rules", title: "Generated agent files", status: "warn", detail: `${stale.length} file(s) do not match the rules: ${stale.map((f) => f.path).join(", ")}.`, fix: "agent-guardrails sync" });
+        add({ id: "rules.sync", area: "Rules", title: "Generated agent files", status: "warn", detail: `${stale.length} file(s) do not match the rules: ${stale.map((f) => f.path).join(", ")}.`, fix: "agent-guardrails-kit sync" });
       } else {
         add({ id: "rules.sync", area: "Rules", title: "Generated agent files", status: "ok", detail: "AGENTS.md and the per-agent files match the rules." });
       }
@@ -186,16 +186,16 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
   const gitFiles: PlannedFile[] = await planFiles(desiredGitFiles(), read);
   for (const file of gitFiles) {
     const label = file.path;
-    if (file.status === "create") add({ id: `git.file.${label}`, area: "Git", title: label, status: isRepo ? "fail" : "warn", detail: "Missing.", fix: "agent-guardrails init" });
+    if (file.status === "create") add({ id: `git.file.${label}`, area: "Git", title: label, status: isRepo ? "fail" : "warn", detail: "Missing.", fix: "agent-guardrails-kit init" });
     else if (file.status === "update" && file.existing === file.content) add({ id: `git.file.${label}`, area: "Git", title: label, status: "fail", detail: "Is not executable. Git silently skips a hook that is not executable.", fix: `chmod +x ${label}` });
-    else if (file.status === "update" || file.status === "conflict") add({ id: `git.file.${label}`, area: "Git", title: label, status: "warn", detail: file.status === "conflict" ? file.reason ?? "Not the kit's file." : "Older or edited.", fix: "agent-guardrails update" });
+    else if (file.status === "update" || file.status === "conflict") add({ id: `git.file.${label}`, area: "Git", title: label, status: "warn", detail: file.status === "conflict" ? file.reason ?? "Not the kit's file." : "Older or edited.", fix: "agent-guardrails-kit update" });
     else add({ id: `git.file.${label}`, area: "Git", title: label, status: "ok" });
   }
   const ignore = await planTextBlocks(".gitignore", [{ id: "state", lines: STATE_GITIGNORE_LINES }, { id: "secrets", lines: SECRETS_GITIGNORE_LINES }], read);
   add(
     ignore.status === "unchanged"
       ? { id: "gitignore", area: "Git", title: ".gitignore", status: "ok", detail: "Secret files and local guard state are ignored." }
-      : { id: "gitignore", area: "Git", title: ".gitignore", status: "warn", detail: "The kit's ignore rules for secret files and local guard state are missing.", fix: "agent-guardrails update" },
+      : { id: "gitignore", area: "Git", title: ".gitignore", status: "warn", detail: "The kit's ignore rules for secret files and local guard state are missing.", fix: "agent-guardrails-kit update" },
   );
 
   // ── GitHub ──
@@ -205,7 +205,7 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
     add(
       missing.length === 0
         ? { id: "github", area: "GitHub", title: "GitHub files", status: "ok", detail: "Pull request template, issue templates, CODEOWNERS and the CI workflow are present." }
-        : { id: "github", area: "GitHub", title: "GitHub files", status: "info", detail: `Missing: ${missing.join(", ")}.`, fix: "agent-guardrails init" },
+        : { id: "github", area: "GitHub", title: "GitHub files", status: "info", detail: `Missing: ${missing.join(", ")}.`, fix: "agent-guardrails-kit init" },
     );
     const owners = await read(".github/CODEOWNERS");
     if (owners !== null && text(owners).split("\n").every((line) => line.trim() === "" || line.trim().startsWith("#"))) {
@@ -222,7 +222,7 @@ export async function diagnose(input: DoctorInput): Promise<DoctorResult> {
     add(
       state.approved
         ? { id: "approval", area: "Approval", title: "Plan approval", status: "info", detail: `${planFile} is approved. Agents may write files until it changes.` }
-        : { id: "approval", area: "Approval", title: "Plan approval", status: "info", detail: `No approved plan (${state.reason}). Agents cannot write files until you approve one.`, fix: "agent-guardrails approve" },
+        : { id: "approval", area: "Approval", title: "Plan approval", status: "info", detail: `No approved plan (${state.reason}). Agents cannot write files until you approve one.`, fix: "agent-guardrails-kit approve" },
     );
   }
 

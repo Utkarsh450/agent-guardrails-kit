@@ -15,22 +15,22 @@ export interface UpdateOptions {
 }
 
 /**
- * `agent-guardrails update`: refreshes the generated files (guard, git checks, agent configs, AGENTS.md and friends)
+ * `agent-guardrails-kit update`: refreshes the generated files (guard, git checks, agent configs, AGENTS.md and friends)
  * from the kit's current version, using the settings `init` saved. Your own files are never overwritten, and a rule
  * you deleted is not brought back.
  */
 export async function runUpdate(ctx: CommandContext, options: UpdateOptions = {}): Promise<number> {
   const { ui } = ctx;
-  ui.intro("agent-guardrails update");
+  ui.intro("agent-guardrails-kit update");
 
   const root = findProjectRoot(ctx.cwd);
   const io = diskSyncIo(root);
   const saved = await loadSavedConfig(io);
   if (saved === null) {
-    throw new CliError("No saved settings found (agent-guardrails.config.json is missing or invalid). Run `agent-guardrails init` first.");
+    throw new CliError("No saved settings found (agent-guardrails.config.json is missing or invalid). Run `agent-guardrails-kit init` first.");
   }
   if (saved.agents.length === 0) {
-    throw new CliError("The saved settings list no agents. Run `agent-guardrails init --agents <list>` to choose them.");
+    throw new CliError("The saved settings list no agents. Run `agent-guardrails-kit init --agents <list>` to choose them.");
   }
 
   // A project that follows a team preset gets it applied again, in the same reviewed plan. A source that is
@@ -59,6 +59,6 @@ export async function runUpdate(ctx: CommandContext, options: UpdateOptions = {}
   });
 
   await reviewAndApply(ui, root, plan, { verb: "update", yes: options.yes, dryRun: options.dryRun, gitConfig: options.gitConfig, diff: options.diff });
-  if (!options.dryRun) ui.outro("Update finished. Run `agent-guardrails doctor` to check the result.");
+  if (!options.dryRun) ui.outro("Update finished. Run `agent-guardrails-kit doctor` to check the result.");
   return 0;
 }

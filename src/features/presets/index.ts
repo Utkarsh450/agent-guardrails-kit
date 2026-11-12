@@ -6,8 +6,9 @@ export { PRESETS, STACKS, type Preset, type Stack };
 
 export const PRESET_SUMMARY: Record<Preset, string> = {
   learner: "Strictest. Asks about unknown commands, records every action in the audit log, and repeats the always-on rules in each agent's own folder.",
-  balanced: "The default. Asks about unknown commands, blocks the dangerous ones, and needs an approved plan before files change.",
-  team: "Same protection, fewer interruptions: common test, build and lint commands for your stack run without asking, and a few more read-only git commands are allowed.",
+  balanced: "The default. Your stack's test, build and lint commands run without asking, unknown commands ask, dangerous ones are blocked, and files change only after you approve a plan.",
+  team: "Like balanced, plus a few more read-only git commands (ls-files, blame, rev-parse and similar).",
+  light: "Fewest interruptions. Like team, but agents can edit files without an approved plan. Dangerous actions are still blocked, and old file content is saved so you can restore it.",
 };
 
 export const STACK_SUMMARY: Record<Stack, string> = {
@@ -51,7 +52,7 @@ export type PresetSettings = Pick<
   "policy" | "allowCommands" | "gitAllow" | "approvalGate" | "auditAllowed" | "alwaysRuleFiles"
 >;
 
-/** The guard settings a preset stands for. Every preset keeps the plan gate on and asks about unknown commands. */
+/** The guard settings a preset stands for. Every preset asks about unknown commands; only `light` turns the plan gate off. */
 export function presetSettings(preset: Preset, stack: Stack, manager: PackageManager | null): PresetSettings {
   const base: PresetSettings = {
     policy: "ask",
@@ -64,10 +65,11 @@ export function presetSettings(preset: Preset, stack: Stack, manager: PackageMan
 
   if (preset === "learner") base.auditAllowed = true;
   if (preset === "learner") base.alwaysRuleFiles = true;
-  if (preset === "team") {
-    base.gitAllow = [...BASE_GIT_ALLOW, ...TEAM_GIT_ALLOW];
-    base.allowCommands = stackAllowCommands(stack, manager);
-  }
+  // Your stack's own test, build and lint commands are safe to run, so only the strictest preset still asks about them.
+  if (preset !== "learner") base.allowCommands = stackAllowCommands(stack, manager);
+  if (preset === "team" || preset === "light") base.gitAllow = [...BASE_GIT_ALLOW, ...TEAM_GIT_ALLOW];
+  // Light skips the plan gate. Checkpoints (on by default) still save the old content of every file an agent changes.
+  if (preset === "light") base.approvalGate = false;
   if (stack === "db-heavy") base.auditAllowed = true;
   return base;
 }

@@ -7,7 +7,7 @@ This kit lowers the chance that an AI agent does something harmful. It does not 
 Use it together with:
 
 - the agents' own permission and sandbox settings (Codex: `approval_policy` and `sandbox_mode`; Claude Code and Qoder: permission rules)
-- branch protection on GitHub (`agent-guardrails explain branch-protection`)
+- branch protection on GitHub (`agent-guardrails-kit explain branch-protection`)
 - a database user that can only do what the work needs, and backups
 - keeping production credentials off the machines where agents run
 
@@ -37,8 +37,8 @@ The guard reads the text of a command. So:
 
 - `policy: "blocklist"` lets commands the guard does not recognise run without asking. The default, `ask`, does not.
 - `approvalGate: false` turns off the plan gate.
-- **A team preset is trusted input.** `agent-guardrails preset use` reads a file in the project or an installed package, and applies it to the settings. A preset can only keep or raise protection (no `blocklist`, no plan gate off, no broad programs in `allowCommands`, only read-only git commands), the change is shown as a diff first, and nothing is downloaded. But whoever controls that file or package controls those settings, so read the diff. A project keeps its own entries and the preset adds to them: a command the team later removes from the preset stays in projects that already received it until someone removes it by hand.
-- `allowCommands` entries match any command that starts with those words, with any arguments. `"node"` alone would let an agent run any script. `agent-guardrails doctor` warns about that. The hard blocks still apply to everything you allow.
+- **A team preset is trusted input.** `agent-guardrails-kit preset use` reads a file in the project or an installed package, and applies it to the settings. A preset can only keep or raise protection (no `blocklist`, no plan gate off, no broad programs in `allowCommands`, only read-only git commands), the change is shown as a diff first, and nothing is downloaded. But whoever controls that file or package controls those settings, so read the diff. A project keeps its own entries and the preset adds to them: a command the team later removes from the preset stays in projects that already received it until someone removes it by hand.
+- `allowCommands` entries match any command that starts with those words, with any arguments. `"node"` alone would let an agent run any script. `agent-guardrails-kit doctor` warns about that. The hard blocks still apply to everything you allow.
 - Bypassing a git hook with `git commit --no-verify` is possible for a person. The guard forbids it for agents.
 
 ## Secrets
@@ -53,14 +53,17 @@ The audit log (`.agent-guardrails/audit.log`) and the dashboard stay on your mac
 
 - **macOS** is tested by hand, with Node and with the Bun runtime.
 - **Linux** is covered by this repository's CI workflow (`.github/workflows/ci.yml`).
-- **Windows is not supported yet.** The hook commands and git hooks use POSIX shell syntax. They may work under Git Bash, but nobody has checked. The CI workflow runs Windows as an experiment that is allowed to fail.
+- **Hooks are read when a session starts.** A Claude Code session that was open before `init` or `update` may not use the new hooks, and Claude Code lets a tool call through when a hook does not run. Start a new session, then check with `agent-guardrails-kit test --prompt`. Reports exist of hooks not firing in some Claude Code setups on Windows. I did not reproduce them: a fresh session in the VS Code extension did block.
+- **Windows works through Git Bash, with gaps.** The hook commands and git hooks use POSIX shell syntax, so Git for Windows must be installed. The unit tests, the hook commands run through Git Bash (including a project path with spaces, and failing closed when the guard or Node is missing) and real git hooks pass on Windows 11. Not covered: Windows with no Git Bash, `cmd.exe` as the hook shell, and `agent-guardrails-kit alerts --notify` (desktop notifications are macOS and Linux only).
+- **The PowerShell tool is checked, but only partly PowerShell-aware.** The guard reads PowerShell commands with its shell rules, after turning `\` into `/`. `git push`, `gh`, `rm` and `Remove-Item` are blocked, and read-only commands (`Get-Content`, `Get-ChildItem`, `Select-String`, `Set-Location` and their aliases) run inside the project with the same path and secret checks as `cat` and `ls`. Every other cmdlet is an unknown program and asks, and PowerShell syntax such as script blocks is not analysed. Claude Code's `permissions.deny` rules written by `init` name `Bash(...)` only; the hook is the protection for PowerShell.
+- **Windows paths.** The guard compares paths without regard to letter case, expands short names such as `UTKARS~1`, and reads Git Bash paths (`/c/Users/...`) as drive paths. Hook scripts are kept LF by a `.gitattributes` block `init` writes, because a CRLF hook cannot run under `sh`.
 - Other runtimes than Node and Bun are not tested.
 
 ## Other things to know
 
 - The guard needs `node` on the PATH of the agent. If it is missing, every action is blocked.
 - A Codex hook must be trusted again after the kit changes it (`/hooks`).
-- Agents' hook formats change. `agent-guardrails doctor` checks the files, not whether the agent still honours them. Run `agent-guardrails test --prompt` after upgrading an agent.
+- Agents' hook formats change. `agent-guardrails-kit doctor` checks the files, not whether the agent still honours them. Run `agent-guardrails-kit test --prompt` after upgrading an agent.
 
 ## Found a way around it?
 

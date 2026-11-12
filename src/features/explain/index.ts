@@ -35,7 +35,7 @@ const TOPICS: Record<string, () => Explanation> = {
     lines: [
       "Agents cannot create or change files until you approve a plan.",
       "1. Ask the agent to write its plan to PLAN.md (it is allowed to write that file).",
-      "2. Read it, then run: agent-guardrails approve",
+      "2. Read it, then run: agent-guardrails-kit approve",
       "3. The agent can now work. If PLAN.md changes afterwards, the approval is cancelled and you approve again.",
       "Turn it off with \"approvalGate\": false in agent-guardrails.config.json (not recommended).",
     ],
@@ -44,9 +44,9 @@ const TOPICS: Record<string, () => Explanation> = {
     title: "Letting commands run without asking",
     lines: [
       "By default the guard asks about commands it does not recognise. To stop asking about one you trust:",
-      "  agent-guardrails allow add \"pnpm test\"",
+      "  agent-guardrails-kit allow add \"pnpm test\"",
       "The entry matches commands that START with those words, with any arguments after them. Hard blocks (rm, git push, gh, publishing...) can never be allowed this way.",
-      "See the list with `agent-guardrails allow list`.",
+      "See the list with `agent-guardrails-kit allow list`.",
     ],
   }),
   git: () => ({
@@ -62,14 +62,14 @@ const TOPICS: Record<string, () => Explanation> = {
     title: "Fail closed",
     lines: [
       "If the guard cannot run (Node missing, file missing, crash, broken settings), the action is blocked instead of allowed.",
-      "That is why a broken setup shows up as everything being blocked. Run `agent-guardrails doctor` to find the cause.",
+      "That is why a broken setup shows up as everything being blocked. Run `agent-guardrails-kit doctor` to find the cause.",
     ],
   }),
   codex: () => ({
     title: "Codex",
     lines: [
       "Codex hooks can only block or stay silent; they cannot ask you. The guard therefore blocks anything it would normally ask about and tells the agent to ask you in chat.",
-      "Codex only runs project hooks you have trusted: open Codex here and run /hooks. Trust is tied to the hook's definition, so re-trust after `agent-guardrails update`.",
+      "Codex only runs project hooks you have trusted: open Codex here and run /hooks. Trust is tied to the hook's definition, so re-trust after `agent-guardrails-kit update`.",
       "Recommended in ~/.codex/config.toml or .codex/config.toml (check the key names in the current Codex docs): approval_policy = \"on-request\" and sandbox_mode = \"workspace-write\".",
     ],
   }),

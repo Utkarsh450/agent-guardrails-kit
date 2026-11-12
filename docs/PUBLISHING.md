@@ -18,7 +18,7 @@ Replace `OWNER` and `REPO` with your GitHub user or organisation and the reposit
   npm pkg set name=your-package-name
   ```
 
-  Then replace the old name in `README.md`, `docs/` and `SECURITY.md` (search for it first: `grep -rn "agent-guardrails-kit" README.md docs SECURITY.md`). The command names (`agent-guardrails` and `agent-guardrails-kit` in `bin`) are separate; keep `agent-guardrails`.
+  Then replace the old name in `README.md`, `docs/` and `SECURITY.md` (search for it first: `grep -rn "agent-guardrails-kit" README.md docs SECURITY.md`). The command name (the one entry in `bin`) is separate. It is `agent-guardrails-kit` on purpose: the bare `agent-guardrails` belongs to a different npm package, so this kit does not install it.
 - **LICENSE:** replace `<YOUR NAME OR ORGANISATION>` with your name.
 - **SECURITY.md:** add your private contact, or rely on GitHub's private vulnerability reporting (turn it on in step 2).
 
@@ -132,7 +132,7 @@ In a new empty folder:
 cd "$(mktemp -d)" && git init && npx agent-guardrails-kit@latest init
 ```
 
-Check that the plan makes sense, that nothing is written before you say yes, and that `agent-guardrails doctor` is happy afterwards.
+Check that the plan makes sense, that nothing is written before you say yes, and that `agent-guardrails-kit doctor` is happy afterwards.
 
 ## 5. Share it
 
@@ -142,12 +142,12 @@ People need to run one command in their project:
 npx agent-guardrails-kit init
 ```
 
-Put that line and a link to the README wherever you share it. Tell people to run `agent-guardrails doctor` and `agent-guardrails test --prompt` afterwards, and to read [docs/LIMITS.md](LIMITS.md): the honest list of what this does not stop is part of the product.
+Put that line and a link to the README wherever you share it. Tell people to run `agent-guardrails-kit doctor` and `agent-guardrails-kit test --prompt` afterwards, and to read [docs/LIMITS.md](LIMITS.md): the honest list of what this does not stop is part of the product.
 
-Once the package is published (the version is no longer `0.0.0`), `init` also writes a CI step that runs `agent-guardrails doctor --ci` from that exact version.
+Once the package is published (the version is no longer `0.0.0`), `init` also writes a CI step that runs `agent-guardrails-kit doctor --ci` from that exact version.
 
 ## 6. Releasing updates
 
 1. Make the change with a test for it (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
 2. `pnpm test`, then `npm version patch` (or `minor`), then `git push --follow-tags`, then `npm publish`.
-3. Tell users to run `agent-guardrails update`. It refreshes the generated files, shows the diff first, and never overwrites their own files. Codex users must trust the changed hook again (`/hooks`).
+3. Tell users to run `agent-guardrails-kit update`. It refreshes the generated files, shows the diff first, and never overwrites their own files. Codex users must trust the changed hook again (`/hooks`).

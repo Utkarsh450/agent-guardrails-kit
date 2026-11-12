@@ -167,6 +167,13 @@ describe("init with prompts", () => {
     expect(await exists(root, "AGENTS.md")).toBe(true);
   });
 
+  it("does not offer the details step when no existing file would change", async () => {
+    const root = await project();
+    const ui = new ScriptedUi([["claude"], "balanced", "generic", true, "apply"]);
+    await run(root, ui);
+    expect(ui.offered["What next?"]).toEqual(["apply", "cancel"]);
+  });
+
   it("--yes skips the choices and uses detected or saved defaults, even in a terminal", async () => {
     const root = await project({ "CLAUDE.md": "x", "go.mod": "module x" });
     const ui = new ScriptedUi([], true);
@@ -246,7 +253,7 @@ describe("refusing bad places", () => {
 describe("update", () => {
   it("needs saved settings", async () => {
     const root = await project();
-    await expect(runUpdate({ cwd: root, ui: new ScriptedUi([], false) }, { yes: true })).rejects.toThrow(/Run `agent-guardrails init` first/);
+    await expect(runUpdate({ cwd: root, ui: new ScriptedUi([], false) }, { yes: true })).rejects.toThrow(/Run `agent-guardrails-kit init` first/);
   });
 
   it("says everything is up to date right after init", async () => {

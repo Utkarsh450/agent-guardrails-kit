@@ -23,10 +23,10 @@ export interface InitOptions {
   diff?: boolean;
 }
 
-/** `agent-guardrails init`: choose, review the plan, approve, write. */
+/** `agent-guardrails-kit init`: choose, review the plan, approve, write. */
 export async function runInit(ctx: CommandContext, options: InitOptions = {}): Promise<number> {
   const { ui } = ctx;
-  ui.intro("agent-guardrails init", { big: true });
+  ui.intro("agent-guardrails-kit init", { big: true });
 
   const root = resolveRoot(ctx.cwd);
   const outer = findProjectRoot(ctx.cwd);
@@ -109,7 +109,7 @@ export async function runInit(ctx: CommandContext, options: InitOptions = {}): P
   });
 
   if (!options.dryRun) {
-    ui.outro("Done. Next: `agent-guardrails doctor` checks the setup, and `agent-guardrails test --hooks` proves the guard blocks what it should.");
+    ui.outro("Done. Next: `agent-guardrails-kit doctor` checks the setup, and `agent-guardrails-kit test --hooks` proves the guard blocks what it should.");
   }
   return 0;
 }

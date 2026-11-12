@@ -20,7 +20,8 @@ describe("default rule templates", () => {
 
   it("includes the core guardrails from the project notes", () => {
     const all = defaultRuleSources.map((source) => source.content).join("\n");
-    expect(all).toMatch(/Do not create, edit, move or delete any file before the user approves/);
+    expect(all).toMatch(/make a plan first .* wait for the user's approval/);
+    expect(all).toMatch(/Do not work around the guard/);
     expect(all).toMatch(/File deletion/);
     expect(all).toMatch(/`gh` commands/);
     expect(all).toMatch(/Stay inside this folder/);

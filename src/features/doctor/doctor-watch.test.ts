@@ -32,7 +32,7 @@ describe("doctor and watch mode", () => {
     const check = await watchCheck({ mode: "watch", watchUntil: "2026-11-14T09:00:00.000Z" });
     expect(check?.status).toBe("warn");
     expect(check?.detail).toMatch(/until 2026-11-14T09:00:00.000Z/);
-    expect(check?.fix).toBe("agent-guardrails mode enforce");
+    expect(check?.fix).toBe("agent-guardrails-kit mode enforce");
   });
 
   it("explains that an expired or open-ended watch mode is not active", async () => {

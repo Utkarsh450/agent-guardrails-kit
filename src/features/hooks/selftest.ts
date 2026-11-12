@@ -48,7 +48,7 @@ function payloadOf(testCase: CorpusCase, root: string): unknown {
     testCase.payload !== undefined
       ? testCase.payload
       : { tool_name: "Bash", tool_input: { command: testCase.command }, cwd: "{{ROOT}}" };
-  return JSON.parse(JSON.stringify(raw === undefined ? null : raw).replaceAll("{{ROOT}}", root));
+  return JSON.parse(JSON.stringify(raw === undefined ? null : raw).replaceAll("{{ROOT}}", JSON.stringify(root).slice(1, -1)));
 }
 
 /** Compares what the guard did with what the case demands. Returns a problem message or null. */

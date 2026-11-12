@@ -1,0 +1,7 @@
+# Keep one line ending everywhere, so Windows checkouts build and run the same as macOS and Linux.
+* text=auto eol=lf
+
+# >>> agent-guardrails:line-endings (managed block; edit outside it)
+.githooks/* text eol=lf
+.agent-guardrails/*.mjs text eol=lf
+# <<< agent-guardrails:line-endings

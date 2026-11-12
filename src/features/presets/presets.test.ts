@@ -13,9 +13,9 @@ describe("presets never weaken the protection", () => {
       for (const manager of [...PACKAGE_MANAGERS, null]) {
         const label = `${preset} / ${stack} / ${manager ?? "no manager"}`;
 
-        it(`${label}: keeps the gate on, asks about unknown commands, and stays valid`, () => {
+        it(`${label}: keeps the gate on (except light), asks about unknown commands, and stays valid`, () => {
           const settings = presetSettings(preset, stack, manager);
-          expect(settings.approvalGate).toBe(true);
+          expect(settings.approvalGate).toBe(preset !== "light");
           expect(settings.policy).toBe("ask");
           expect(settings.gitAllow).toEqual(expect.arrayContaining(["status", "diff", "log", "show"]));
           expect(validateConfig(settings).error).toBeUndefined();
@@ -40,10 +40,26 @@ describe("presets never weaken the protection", () => {
 
   it("learner logs everything and repeats rules per agent; balanced does neither; team allows more read-only git", () => {
     expect(presetSettings("learner", "generic", null)).toMatchObject({ auditAllowed: true, alwaysRuleFiles: true, allowCommands: [] });
-    expect(presetSettings("balanced", "node-ts", "pnpm")).toMatchObject({ auditAllowed: false, alwaysRuleFiles: false, allowCommands: [] });
+    expect(presetSettings("balanced", "generic", null)).toMatchObject({ auditAllowed: false, alwaysRuleFiles: false, allowCommands: [] });
+    const balanced = presetSettings("balanced", "node-ts", "pnpm");
+    expect(balanced).toMatchObject({ auditAllowed: false, alwaysRuleFiles: false, gitAllow: ["status", "diff", "log", "show"] });
+    expect(balanced.allowCommands).toEqual(expect.arrayContaining(["pnpm test", "pnpm build", "tsc --noEmit"]));
+    expect(presetSettings("learner", "node-ts", "pnpm").allowCommands).toEqual([]);
     const team = presetSettings("team", "node-ts", "pnpm");
     expect(team.gitAllow).toEqual(expect.arrayContaining([...TEAM_GIT_ALLOW]));
     expect(team.allowCommands).toEqual(expect.arrayContaining(["pnpm test", "pnpm build", "tsc --noEmit"]));
+  });
+
+  it("light is the only preset without the plan gate, and keeps checkpoints and the question for unknown commands", () => {
+    const light = presetSettings("light", "node-ts", "pnpm");
+    expect(light).toMatchObject({ approvalGate: false, policy: "ask" });
+    expect(light.gitAllow).toEqual(expect.arrayContaining([...TEAM_GIT_ALLOW]));
+    expect(light.allowCommands).toContain("pnpm test");
+    for (const preset of ["learner", "balanced", "team"] as const) expect(presetSettings(preset, "generic", null).approvalGate).toBe(true);
+    expect(configSchema.parse({}).checkpoints).toBe(true);
+    const ctx = makeContext({ config: light });
+    expect(shell("rm -rf x", ctx).decision).toBe("deny");
+    expect(shell("python -c 'print(1)'", ctx).decision).toBe("ask");
   });
 
   it("db-heavy logs everything for any preset", () => {

@@ -78,7 +78,7 @@ export async function gatherDoctor(root: string, options: DoctorOptions = {}): P
   });
 }
 
-/** `agent-guardrails doctor`: reports what works, what is out of date and what is missing. */
+/** `agent-guardrails-kit doctor`: reports what works, what is out of date and what is missing. */
 export async function runDoctor(ctx: CommandContext, options: DoctorOptions = {}): Promise<number> {
   const { ui } = ctx;
   const root = findProjectRoot(ctx.cwd);
@@ -87,7 +87,7 @@ export async function runDoctor(ctx: CommandContext, options: DoctorOptions = {}
   if (options.json) {
     ui.print(JSON.stringify(result, null, 2));
   } else {
-    if (!options.ci) ui.intro("agent-guardrails doctor");
+    if (!options.ci) ui.intro("agent-guardrails-kit doctor");
     ui.print(formatDoctor(result));
     if (!options.ci) {
       const fixes = [...new Set(result.checks.filter((c: Check) => c.status === "fail" && c.fix).map((c) => c.fix as string))];

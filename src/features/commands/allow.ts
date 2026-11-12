@@ -22,7 +22,7 @@ const normalize = (pattern: string) => pattern.trim().split(/\s+/).join(" ");
 async function load(ctx: CommandContext): Promise<{ root: string; saved: GuardrailsConfig }> {
   const root = findProjectRoot(ctx.cwd);
   const saved = await loadSavedConfig(diskSyncIo(root));
-  if (saved === null) throw new CliError(`No valid settings found. Run \`agent-guardrails init\` first (${CONFIG_FILE} is missing or invalid).`);
+  if (saved === null) throw new CliError(`No valid settings found. Run \`agent-guardrails-kit init\` first (${CONFIG_FILE} is missing or invalid).`);
   return { root, saved };
 }
 
@@ -36,11 +36,11 @@ async function save(root: string, transform: (list: string[]) => string[]): Prom
   await applyPlan(root, [plan]);
 }
 
-/** `agent-guardrails allow list` */
+/** `agent-guardrails-kit allow list` */
 export async function runAllowList(ctx: CommandContext): Promise<number> {
   const { saved } = await load(ctx);
   if (saved.allowCommands.length === 0) {
-    ctx.ui.info('No commands are allowed to run without asking. Add one with: agent-guardrails allow add "pnpm test"');
+    ctx.ui.info('No commands are allowed to run without asking. Add one with: agent-guardrails-kit allow add "pnpm test"');
     return 0;
   }
   ctx.ui.print("These commands run without asking (any arguments may follow them):");
@@ -48,12 +48,12 @@ export async function runAllowList(ctx: CommandContext): Promise<number> {
   return 0;
 }
 
-/** `agent-guardrails allow add "<command>"`: stop asking about a command you trust. */
+/** `agent-guardrails-kit allow add "<command>"`: stop asking about a command you trust. */
 export async function runAllowAdd(ctx: CommandContext, rawPattern: string, options: AllowOptions = {}): Promise<number> {
   const { ui } = ctx;
   const { root, saved } = await load(ctx);
   const pattern = normalize(rawPattern);
-  if (pattern === "") throw new CliError('Say which command to allow, for example: agent-guardrails allow add "pnpm test"');
+  if (pattern === "") throw new CliError('Say which command to allow, for example: agent-guardrails-kit allow add "pnpm test"');
   if (pattern.split(" ")[0] === "*") throw new CliError('An entry must start with a command name, not "*". Allowing everything would switch the guard off.');
   if (saved.allowCommands.includes(pattern)) {
     ui.info(`"${pattern}" is already allowed.`);
@@ -65,10 +65,10 @@ export async function runAllowAdd(ctx: CommandContext, rawPattern: string, optio
   const result = evaluate(normalizeRequest({ tool_name: "Bash", tool_input: { command: pattern }, cwd: "/proj" }), probe);
   const why = ruleInfo(result.rule);
   if (result.decision === "deny") {
-    throw new CliError(`"${pattern}" is always blocked (${result.rule}: ${why?.title ?? "see agent-guardrails explain " + result.rule}), so allowing it would do nothing. Run it yourself.`);
+    throw new CliError(`"${pattern}" is always blocked (${result.rule}: ${why?.title ?? "see agent-guardrails-kit explain " + result.rule}), so allowing it would do nothing. Run it yourself.`);
   }
   if (result.decision === "ask") {
-    throw new CliError(`"${pattern}" would still ask (${result.rule}: ${why?.title ?? result.reason}). This kind of command cannot be allowed in advance. Run \`agent-guardrails explain ${result.rule}\` for why.`);
+    throw new CliError(`"${pattern}" would still ask (${result.rule}: ${why?.title ?? result.reason}). This kind of command cannot be allowed in advance. Run \`agent-guardrails-kit explain ${result.rule}\` for why.`);
   }
   if (result.rule === "allowed") {
     ui.info(`"${pattern}" already runs without asking (the guard knows it is harmless), so nothing was added.`);
@@ -92,7 +92,7 @@ export async function runAllowAdd(ctx: CommandContext, rawPattern: string, optio
   return 0;
 }
 
-/** `agent-guardrails allow remove "<command>"` */
+/** `agent-guardrails-kit allow remove "<command>"` */
 export async function runAllowRemove(ctx: CommandContext, rawPattern: string, options: AllowOptions = {}): Promise<number> {
   const { ui } = ctx;
   const { root, saved } = await load(ctx);

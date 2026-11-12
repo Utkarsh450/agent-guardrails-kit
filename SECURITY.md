@@ -14,7 +14,7 @@ Please report any of these:
 
 ## How to report
 
-Do **not** open a public issue for a bypass. Use GitHub's private vulnerability reporting on this repository ("Security" tab, then "Report a vulnerability"), or contact the maintainer privately: _(maintainer: add your contact here before publishing)_.
+Do **not** open a public issue for a bypass. Use GitHub's private vulnerability reporting on this repository ("Security" tab, then "Report a vulnerability"). Turn it on in the repository settings before the first release.
 
 Include the exact command or payload, the agent and settings you used, and what you expected. A failing test case for `src/features/hooks/corpus/` is ideal.
 

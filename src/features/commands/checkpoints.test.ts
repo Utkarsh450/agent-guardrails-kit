@@ -6,7 +6,7 @@ import { runCheckpoints } from "./checkpoints.ts";
 
 const ESC = String.fromCharCode(27);
 
-describe("agent-guardrails checkpoints", () => {
+describe("agent-guardrails-kit checkpoints", () => {
   it("says so when nothing has been saved", async () => {
     const ui = new ScriptedUi([], false);
     expect(await runCheckpoints({ cwd: await tempProject(), ui })).toBe(0);
@@ -55,7 +55,7 @@ describe("agent-guardrails checkpoints", () => {
     expect(ui.text).toContain("a.ts: saved, 1 KB");
     expect(ui.text).toContain("new.ts: did not exist (the agent created it)");
     expect(ui.text).toContain("big.bin: not saved: it is bigger than the 1 MB limit");
-    expect(ui.text).toContain(`agent-guardrails restore ${ID_A}`);
+    expect(ui.text).toContain(`agent-guardrails-kit restore ${ID_A}`);
   });
 
   it("refuses an id that is not an id, and one that is not there", async () => {
@@ -64,7 +64,8 @@ describe("agent-guardrails checkpoints", () => {
     await expect(runCheckpoints({ cwd: root, ui: new ScriptedUi([], false) }, ID_A)).rejects.toThrow(/No checkpoint/);
   });
 
-  it("removes control characters from file names", async () => {
+  // Windows cannot create a file name with a control character, so there is nothing to show there.
+  it.skipIf(process.platform === "win32")("removes control characters from file names", async () => {
     const root = await tempProject();
     await makeCheckpoint(root, ID_A, [{ path: `src/${ESC}[2Jevil.ts`, existed: true, content: "x" }]);
     const ui = new ScriptedUi([], false);

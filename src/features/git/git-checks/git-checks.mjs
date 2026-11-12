@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// agent-guardrails:generated installed copy of the git checks. Update it with `agent-guardrails update`; do not edit by hand.
+// agent-guardrails:generated installed copy of the git checks. Update it with `agent-guardrails-kit update`; do not edit by hand.
 //
 // Checks that run from git hooks and from CI, whichever AI agent (or human) made the change:
 //   pre-commit          secrets and secret files in staged changes; new dependencies; dangerous install scripts

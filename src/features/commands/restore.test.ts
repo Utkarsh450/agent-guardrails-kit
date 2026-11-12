@@ -19,7 +19,7 @@ async function scene() {
   return root;
 }
 
-describe("agent-guardrails restore", () => {
+describe("agent-guardrails-kit restore", () => {
   it("puts the saved content back, shows the diff, and keeps the checkpoint", async () => {
     const root = await scene();
     const ui = new ScriptedUi([], false);

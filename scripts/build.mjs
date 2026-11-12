@@ -14,7 +14,8 @@ const rawPlugin = {
       namespace: "raw",
     }));
     b.onLoad({ filter: /.*/, namespace: "raw" }, async (args) => ({
-      contents: await readFile(args.path, "utf8"),
+      // Always LF, so a build made on Windows (where git may check files out with CRLF) ships the same text as one made on macOS or Linux.
+      contents: (await readFile(args.path, "utf8")).replaceAll("\r\n", "\n"),
       loader: "text",
     }));
   },

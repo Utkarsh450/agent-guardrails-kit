@@ -18,7 +18,7 @@ export interface ModeOptions {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * `agent-guardrails mode [watch|enforce]`: with no argument, says which mode the guard is in.
+ * `agent-guardrails-kit mode [watch|enforce]`: with no argument, says which mode the guard is in.
  * `mode watch` lets actions the guard would ASK about run (and logs them) for a limited number of days.
  * Blocked actions stay blocked. Only a person should run this: the guard stops agents from running it.
  */
@@ -28,12 +28,12 @@ export async function runMode(ctx: CommandContext, name?: string, options: ModeO
   const root = findProjectRoot(ctx.cwd);
   const io = diskSyncIo(root);
   const saved = await loadSavedConfig(io);
-  if (saved === null) throw new CliError("No saved settings found. Run `agent-guardrails init` first.");
+  if (saved === null) throw new CliError("No saved settings found. Run `agent-guardrails-kit init` first.");
 
   if (name === undefined) {
     if (saved.mode === "watch" && watchActive(saved, now)) {
       ui.warn(`Watch mode is ON until ${saved.watchUntil}. Actions the guard would ask about run and are logged. Blocked actions are still blocked.`);
-      ui.print("Switch it off now with: agent-guardrails mode enforce");
+      ui.print("Switch it off now with: agent-guardrails-kit mode enforce");
     } else if (saved.mode === "watch") {
       ui.info('The settings say "watch" but there is no valid end date within the next 30 days, so the guard is enforcing.');
     } else {
@@ -83,6 +83,6 @@ export async function runMode(ctx: CommandContext, name?: string, options: ModeO
     if (!(await ui.confirm({ message: name === "watch" ? "Turn watch mode on?" : "Switch back to enforcing?", initial: false }))) throw new CancelledError();
   }
   await applyPlan(root, [plan]);
-  ui.success(name === "watch" ? "Watch mode is on. See what it let through with `agent-guardrails report`." : "The guard is enforcing again.");
+  ui.success(name === "watch" ? "Watch mode is on. See what it let through with `agent-guardrails-kit report`." : "The guard is enforcing again.");
   return 0;
 }

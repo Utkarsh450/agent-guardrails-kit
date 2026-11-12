@@ -10,14 +10,14 @@ export interface SyncCommandOptions {
   dryRun?: boolean;
 }
 
-/** `agent-guardrails sync`: regenerates AGENTS.md, CLAUDE.md and the per-agent rule files from agent-rules/. */
+/** `agent-guardrails-kit sync`: regenerates AGENTS.md, CLAUDE.md and the per-agent rule files from agent-rules/. */
 export async function runSync(ctx: CommandContext, options: SyncCommandOptions = {}): Promise<number> {
   const { ui } = ctx;
   const root = findProjectRoot(ctx.cwd);
   const io = diskSyncIo(root);
   const saved = await loadSavedConfig(io);
   if (saved === null || saved.agents.length === 0) {
-    throw new CliError("No saved agents found. Run `agent-guardrails init` first so it knows which files to generate.");
+    throw new CliError("No saved agents found. Run `agent-guardrails-kit init` first so it knows which files to generate.");
   }
 
   const plan = await planSync(io, { agents: saved.agents, alwaysRuleFiles: saved.alwaysRuleFiles });
@@ -34,7 +34,7 @@ export async function runSync(ctx: CommandContext, options: SyncCommandOptions =
     return 0;
   }
   if (options.check) {
-    ui.error(`${changes.length} generated file(s) are out of date. Run \`agent-guardrails sync\`.`);
+    ui.error(`${changes.length} generated file(s) are out of date. Run \`agent-guardrails-kit sync\`.`);
     return 1;
   }
   if (options.dryRun) {

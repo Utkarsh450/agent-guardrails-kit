@@ -58,7 +58,7 @@ describe("an empty project", () => {
   it("fails on settings, guard and rules, and points at init", async () => {
     const result = await run(memoryIo());
     expect(byStatus(result, "fail")).toEqual(expect.arrayContaining(["config", "guard", "rules"]));
-    expect(find(result, "config")?.fix).toBe("agent-guardrails init");
+    expect(find(result, "config")?.fix).toBe("agent-guardrails-kit init");
     expect(find(result, "agents")?.status).toBe("warn");
   });
 });
@@ -89,7 +89,7 @@ describe("guard", () => {
     const io = await healthy();
     const original = io.files.get(".agent-guardrails/guard.mjs") ?? "";
     io.files.set(".agent-guardrails/guard.mjs", `${original}\n// edited`);
-    expect(find(await run(io), "guard")).toMatchObject({ status: "warn", fix: "agent-guardrails update" });
+    expect(find(await run(io), "guard")).toMatchObject({ status: "warn", fix: "agent-guardrails-kit update" });
     io.files.set(".agent-guardrails/guard.mjs", "console.log('hi')");
     expect(find(await run(io), "guard")?.status).toBe("fail");
     io.files.delete(".agent-guardrails/guard.mjs");
@@ -126,7 +126,7 @@ describe("agents", () => {
     const outdated = structuredClone(settings);
     outdated.hooks.PreToolUse[0].hooks[0].command = 'node ".agent-guardrails/guard.mjs"';
     io.files.set(".claude/settings.json", JSON.stringify(outdated));
-    expect(find(await run(io), "agent.claude")).toMatchObject({ status: "warn", fix: "agent-guardrails update" });
+    expect(find(await run(io), "agent.claude")).toMatchObject({ status: "warn", fix: "agent-guardrails-kit update" });
 
     const partial = structuredClone(settings);
     partial.hooks.PreToolUse.pop();
@@ -136,7 +136,7 @@ describe("agents", () => {
     const gone = structuredClone(settings);
     delete gone.hooks;
     io.files.set(".claude/settings.json", JSON.stringify(gone));
-    expect(find(await run(io), "agent.claude")).toMatchObject({ status: "fail", fix: "agent-guardrails init" });
+    expect(find(await run(io), "agent.claude")).toMatchObject({ status: "fail", fix: "agent-guardrails-kit init" });
   });
 
   it("fails on a broken or missing settings file", async () => {
@@ -186,7 +186,7 @@ describe("agents", () => {
 
   it("checks Antigravity's user permissions only when given them", async () => {
     const io = await healthy();
-    expect(find(await run(io), "agent.antigravity.permissions")).toMatchObject({ status: "info", fix: "agent-guardrails doctor --check-user-settings" });
+    expect(find(await run(io), "agent.antigravity.permissions")).toMatchObject({ status: "info", fix: "agent-guardrails-kit doctor --check-user-settings" });
     expect(find(await run(io, { antigravityUserSettings: antigravityPermissionsSnippet() }), "agent.antigravity.permissions")?.status).toBe("ok");
     expect(find(await run(io, { antigravityUserSettings: JSON.stringify({ permissions: { deny: ["command(rm)"] } }) }), "agent.antigravity.permissions")?.status).toBe("warn");
     expect(find(await run(io, { antigravityUserSettings: "{ nope" }), "agent.antigravity.permissions")?.status).toBe("warn");
@@ -195,7 +195,7 @@ describe("agents", () => {
   it("warns about an agent that is used in the project but not protected", async () => {
     const io = await healthy({ agents: ["claude"] }, { ".cursor/rules/x.mdc": "x" });
     const result = await run(io);
-    expect(find(result, "agent.cursor.unprotected")).toMatchObject({ status: "warn", fix: "agent-guardrails init --agents claude,cursor" });
+    expect(find(result, "agent.cursor.unprotected")).toMatchObject({ status: "warn", fix: "agent-guardrails-kit init --agents claude,cursor" });
   });
 });
 
@@ -204,7 +204,7 @@ describe("rules", () => {
     const io = await healthy();
     io.files.set("agent-rules/always/repo.md", "---\ndescription: Changed\n---\n\n# Changed\n\nNew rule text.");
     const result = await run(io);
-    expect(find(result, "rules.sync")).toMatchObject({ status: "warn", fix: "agent-guardrails sync" });
+    expect(find(result, "rules.sync")).toMatchObject({ status: "warn", fix: "agent-guardrails-kit sync" });
     expect(find(result, "rules.sync")?.detail).toContain("AGENTS.md");
   });
 

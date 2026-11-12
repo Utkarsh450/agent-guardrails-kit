@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// agent-guardrails:generated installed copy of the guard. Update it with `agent-guardrails update`; do not edit by hand.
+// agent-guardrails:generated installed copy of the guard. Update it with `agent-guardrails-kit update`; do not edit by hand.
 // agent-guardrails guard: a dependency-free PreToolUse hook for Claude Code, Cursor, Codex and Qoder.
 //
 // It reads one hook payload from stdin, decides allow / ask / deny, and answers in the format the
@@ -14,8 +14,25 @@
 
 import crypto from "node:crypto";
 import fs from "node:fs";
-import path from "node:path";
+import nodePath from "node:path";
 import { fileURLToPath } from "node:url";
+
+/**
+ * The path rules in use. A real run uses the machine's own (Windows or POSIX). The in-memory test file system is
+ * POSIX on every machine, so it says so with `pathFlavour`, and the guard follows it.
+ */
+let path = nodePath;
+function usePathFlavour(fsx) {
+  path = fsx?.pathFlavour === "posix" ? nodePath.posix : fsx?.pathFlavour === "win32" ? nodePath.win32 : nodePath;
+}
+
+/** True when `target` is `root` or lies inside it. Windows paths ignore letter case, as the file system does. */
+function isInsideRoot(target, root) {
+  const fold = path.sep === "\\" ? (text) => text.toLowerCase() : (text) => text;
+  const a = fold(target);
+  const b = fold(root);
+  return a === b || a.startsWith(b.endsWith(path.sep) ? b : b + path.sep);
+}
 
 // ───────────────────────────── config ─────────────────────────────
 
@@ -555,6 +572,10 @@ const READ_ONLY = new Set([
   "stat", "file", "tree", "du", "df", "sort", "uniq", "cut", "tr", "diff", "cmp", "jq", "comm", "nl", "fold",
   "expand", "column", "rev", "tac", "seq", "sleep", "ps", "pgrep", "lsof", "uptime", "bat", "eza", "exa", "md5sum",
   "shasum", "sha1sum", "sha256sum", "cksum", "od", "xxd", "hexdump", "strings", "cd", "pushd", "popd",
+  // PowerShell commands (and their aliases) that only read or move around. They get the same path checks as cat and ls.
+  "get-content", "gc", "get-childitem", "gci", "dir", "get-location", "gl", "select-string", "sls", "get-item", "gi",
+  "test-path", "resolve-path", "get-date", "write-output", "get-command", "gcm", "get-filehash", "get-process", "gps",
+  "set-location", "sl", "push-location", "pop-location",
 ]);
 
 const VERSION_PROGRAMS = new Set([
@@ -563,7 +584,7 @@ const VERSION_PROGRAMS = new Set([
 ]);
 
 const FILE_DELETERS = new Set([
-  "rm", "rmdir", "unlink", "shred", "srm", "trash", "trash-put", "rimraf", "del", "erase", "rd", "truncate",
+  "rm", "rmdir", "unlink", "shred", "srm", "trash", "trash-put", "rimraf", "del", "erase", "rd", "remove-item", "ri", "truncate",
   "mkfs", "diskutil", "format", "fdisk", "wipefs", "taskkill",
 ]);
 
@@ -717,7 +738,7 @@ function globHitsSecret(token, cwd, ctx) {
   const base = path.basename(abs);
   if (!/[*?[]/.test(base)) return none;
   const dir = path.dirname(abs);
-  if (dir !== ctx.rootReal && !dir.startsWith(ctx.rootReal + path.sep)) return none;
+  if (!isInsideRoot(dir, ctx.rootReal)) return none;
   let names;
   let re;
   try {
@@ -735,9 +756,15 @@ function globHitsSecret(token, cwd, ctx) {
   return { hit: null, listed: true };
 }
 
+/** The real path of an existing file. The native version also expands Windows short names (UTKARS~1) and letter case. */
+function realpathOf(fsx, target) {
+  const native = fsx.realpathSync.native;
+  return typeof native === "function" ? native(target) : fsx.realpathSync(target);
+}
+
 function realpathSafe(fsx, target) {
   try {
-    return fsx.realpathSync(target);
+    return realpathOf(fsx, target);
   } catch {
     let current = target;
     const tail = [];
@@ -747,7 +774,7 @@ function realpathSafe(fsx, target) {
       tail.unshift(path.basename(current));
       current = parent;
       try {
-        return path.join(fsx.realpathSync(current), ...tail);
+        return path.join(realpathOf(fsx, current), ...tail);
       } catch {
         // keep walking up
       }
@@ -757,19 +784,24 @@ function realpathSafe(fsx, target) {
 
 function expandTilde(p, home) {
   if (p === "~") return home;
-  if (p.startsWith("~/")) return path.join(home, p.slice(2));
+  if (p.startsWith("~/") || (path.sep === "\\" && p.startsWith("~\\"))) return path.join(home, p.slice(2));
+  // Git Bash writes Windows drives as /c/Users/... (or /cygdrive/c/...). Turn them into C:\Users\...
+  if (path.sep === "\\") {
+    const drive = /^\/(?:cygdrive\/)?([a-zA-Z])(?:\/(.*))?$/.exec(p);
+    if (drive) return `${drive[1].toUpperCase()}:\\${drive[2] ?? ""}`;
+  }
   return p;
 }
 
 /** Resolves a path against `cwd` and tells where it lies relative to the project root. */
 function pathInfo(target, cwd, ctx) {
-  if (target.startsWith("~") && target !== "~" && !target.startsWith("~/")) {
+  if (target.startsWith("~") && target !== "~" && !target.startsWith("~/") && !(path.sep === "\\" && target.startsWith("~\\"))) {
     // ~user expands to another account's home, which we cannot resolve. Treat it as outside.
     return { abs: target, real: target, inside: false, rel: null };
   }
   const abs = path.resolve(cwd, expandTilde(target, ctx.home));
   const real = realpathSafe(ctx.fs, abs);
-  const inside = real === ctx.rootReal || real.startsWith(ctx.rootReal + path.sep);
+  const inside = isInsideRoot(real, ctx.rootReal);
   const rel = inside ? path.relative(ctx.rootReal, real).split(path.sep).join("/") : null;
   return { abs, real, inside, rel };
 }
@@ -816,7 +848,7 @@ function gateWrite(info, ctx) {
   return mk(
     "deny",
     "no-approved-plan",
-    `No approved plan (${state.reason}). Write the plan to ${ctx.config.planFile}, then ask the user to review it and run \`agent-guardrails approve\`.`,
+    `No approved plan (${state.reason}). Write the plan to ${ctx.config.planFile}, then ask the user to review it and run \`agent-guardrails-kit approve\`.`,
   );
 }
 
@@ -1362,7 +1394,7 @@ const RG_PATTERN_OPTIONS = new Set(["-e", "-f", "--regexp", "--file"]);
 function searchRoots(positionals, patternGiven, cwd, ctx, skipFirst) {
   const paths = skipFirst && !patternGiven ? positionals.slice(1) : positionals;
   const roots = (paths.length > 0 ? paths : ["."]).map((p) => path.resolve(cwd, expandTilde(p, ctx.home)));
-  return roots.filter((r) => r === ctx.rootReal || r.startsWith(ctx.rootReal + path.sep));
+  return roots.filter((r) => isInsideRoot(r, ctx.rootReal));
 }
 
 /** Returns a deny decision when a recursive search would read a secret file, otherwise null. */
@@ -1423,7 +1455,7 @@ function recursiveSecretHit(prog, args, state, ctx) {
     }
     const roots = positionals
       .map((p) => path.resolve(state.cwd, expandTilde(p, ctx.home)))
-      .filter((r) => r === ctx.rootReal || r.startsWith(ctx.rootReal + path.sep));
+      .filter((r) => isInsideRoot(r, ctx.rootReal));
     const hits = roots.flatMap((root) => applyNameFilters(secretFilesUnder(root, ctx, []), filters));
     return hits.length > 0
       ? secretReadDecision("diff -r", hits, "Exclude them with -x '.env*' or compare specific files instead.")
@@ -1461,7 +1493,7 @@ function findReaderSecretHit(args, state, ctx) {
   if (!readerExec.some((name) => CONTENT_READERS.has(name))) return null;
   const roots = (starts.length > 0 ? starts : ["."])
     .map((p) => path.resolve(state.cwd, expandTilde(p, ctx.home)))
-    .filter((r) => r === ctx.rootReal || r.startsWith(ctx.rootReal + path.sep));
+    .filter((r) => isInsideRoot(r, ctx.rootReal));
   const hits = roots.flatMap((root) => applyNameFilters(secretFilesUnder(root, ctx, []), names));
   return hits.length > 0
     ? secretReadDecision("find -exec", hits, "Exclude them with ! -name '.env*' or list specific files instead.")
@@ -1603,6 +1635,19 @@ function guardrailsCliSubcommand(words) {
 }
 
 /** Classifies one simple command. Returns a single decision. */
+/** Top-level folders that exist in Git Bash on Windows (as /etc, /usr, /tmp, /c/...) even though C:\etc does not. */
+const MSYS_TOP_FOLDERS = new Set([
+  "bin", "boot", "dev", "etc", "home", "lib", "lib64", "mingw32", "mingw64", "mnt", "opt", "proc", "root", "run", "sbin",
+  "srv", "sys", "tmp", "usr", "var", "cygdrive", "users", "windows", "program files",
+]);
+
+/** Does `/top/...` name a real folder, rather than a pattern such as the /foo/ in `grep /foo/`? */
+function isRealTopFolder(top, ctx) {
+  if (ctx.fs.existsSync(`/${top}`)) return true;
+  // On Windows that check fails for /etc and /usr, so a Git Bash drive (/c) or a well-known folder counts as real.
+  return path.sep === "\\" && (/^[a-zA-Z]$/.test(top) || MSYS_TOP_FOLDERS.has(top.toLowerCase()));
+}
+
 function classifyCommand(cmd, ctx, state, depth) {
   const parts = [];
 
@@ -1637,7 +1682,7 @@ function classifyCommand(cmd, ctx, state, depth) {
 
   const cliSub = guardrailsCliSubcommand(words);
   if (typeof cliSub === "string" && GUARDRAILS_MODIFYING.has(cliSub)) {
-    parts.push(mk("deny", "guardrails-cli", `agent-guardrails ${cliSub} changes the guardrails themselves or opens a local server (approval, allowed commands, settings, dashboard). Only you may run it; an agent may not approve its own plan.`));
+    parts.push(mk("deny", "guardrails-cli", `agent-guardrails-kit ${cliSub} changes the guardrails themselves or opens a local server (approval, allowed commands, settings, dashboard). Only you may run it; an agent may not approve its own plan.`));
     return worst(parts);
   }
 
@@ -1855,7 +1900,7 @@ function classifyCommand(cmd, ctx, state, depth) {
     return worst(parts);
   }
   if (READ_ONLY.has(prog) && !(extra && extra(args))) {
-    if (prog === "cd" || prog === "pushd") {
+    if (prog === "cd" || prog === "pushd" || prog === "set-location" || prog === "sl" || prog === "push-location") {
       const target = args.find((a) => !isOption(a));
       if (target && !target.dyn && target.v !== "-") {
         const info = pathInfo(target.v, state.cwd, ctx);
@@ -1916,7 +1961,7 @@ function finishWithArgs(parts, cmd, prog, args, state, ctx, readOnlyProgram = fa
       if (t.startsWith("/") && t !== "/") {
         const top = t.split("/")[1] ?? "";
         // A real top-level folder, or a wildcard/brace that could expand to one, must be checked.
-        if (top !== "" && !/[*?[{]/.test(top) && !ctx.fs.existsSync(`/${top}`)) continue; // looks like a pattern
+        if (top !== "" && !/[*?[{]/.test(top) && !isRealTopFolder(top, ctx)) continue; // looks like a pattern
       }
       const glob = globHitsSecret(t, state.cwd, ctx);
       if (glob.hit !== null) {
@@ -1933,6 +1978,7 @@ function finishWithArgs(parts, cmd, prog, args, state, ctx, readOnlyProgram = fa
 // ───────────────────────────── shell entry point ─────────────────────────────
 
 export function analyzeShell(command, ctx, state = { cwd: ctx.cwd }, depth = 0) {
+  usePathFlavour(ctx.fs);
   if (depth > MAX_DEPTH) return mk("ask", "too-deep", "The command is nested too deeply to check.");
   const parts = [];
   if (BASE64_EXEC.test(command)) {
@@ -1951,7 +1997,7 @@ export function analyzeShell(command, ctx, state = { cwd: ctx.cwd }, depth = 0) 
 
 // ───────────────────────────── file tools ─────────────────────────────
 
-const SHELL_TOOLS = new Set(["bash", "shell", "run_shell_command", "run_terminal_cmd", "terminal", "execute_command"]);
+const SHELL_TOOLS = new Set(["bash", "shell", "run_shell_command", "run_terminal_cmd", "terminal", "execute_command", "powershell", "pwsh"]);
 const WRITE_TOOLS = new Set([
   "write", "edit", "multiedit", "notebookedit", "create", "create_file", "write_file", "edit_file", "str_replace_editor",
   "str_replace_based_edit_tool", "str_replace", "insert", "replace_in_file",
@@ -2033,9 +2079,11 @@ export function normalizeRequest(payload) {
 
   if (SHELL_TOOLS.has(lower)) {
     const command = parsedInput?.command ?? parsedInput?.cmd;
-    return typeof command === "string"
-      ? { kind: "shell", tool, command, cwd }
-      : { kind: "invalid", reason: `${tool} call has no command` };
+    if (typeof command !== "string") return { kind: "invalid", reason: `${tool} call has no command` };
+    // In PowerShell a backslash separates folders. The shell rules used here would read it as an escape and turn
+    // ..\..\x into a file inside the project, so for PowerShell it is read as the slash it stands for.
+    const analysed = lower === "powershell" || lower === "pwsh" ? command.replaceAll("\\", "/") : command;
+    return { kind: "shell", tool, command: analysed, cwd };
   }
   if (lower === "apply_patch") {
     const text = parsedInput?.command ?? parsedInput?.patch ?? parsedInput?.input;
@@ -2063,6 +2111,7 @@ function safeJson(text) {
 
 /** Decides one normalized request. ctx = { root, rootReal, cwd, home, config, fs }. */
 export function evaluate(request, ctx) {
+  usePathFlavour(ctx.fs);
   switch (request.kind) {
     case "invalid":
       return mk("deny", "unrecognized-input", `The hook input could not be understood (${request.reason}).`);
@@ -2187,7 +2236,7 @@ function writeAudit(ctx, agent, request, result, watched = false) {
 
 // ───────────────────────────── checkpoints ─────────────────────────────
 // Before an agent's file write goes through, the old content of the file is copied to
-// .agent-guardrails/checkpoints/<id>/files/<path> with a manifest, so `agent-guardrails restore` can put it back.
+// .agent-guardrails/checkpoints/<id>/files/<path> with a manifest, so `agent-guardrails-kit restore` can put it back.
 // Taking a checkpoint never changes the guard's answer: any failure is swallowed. Nothing is ever deleted or rotated;
 // when a limit is reached the guard simply stops saving more.
 
@@ -2349,6 +2398,7 @@ export function runGuard({ stdin, argv = [], scriptDir, fsImpl = fs, home = proc
     }
     agent = agent ?? inferAgent(payload);
 
+    usePathFlavour(fsImpl);
     const root = path.resolve(args.root ?? path.join(scriptDir, ".."));
     const rootReal = realpathSafe(fsImpl, root);
 
@@ -2394,7 +2444,7 @@ async function main() {
     stdin: await readStdin(),
     argv: process.argv.slice(2),
     scriptDir: path.dirname(fileURLToPath(import.meta.url)),
-    // Set by `agent-guardrails test --hooks` so the self-test does not fill the audit log. An agent cannot
+    // Set by `agent-guardrails-kit test --hooks` so the self-test does not fill the audit log. An agent cannot
     // set this: the variable must be in the hook's own environment, not in the command being checked.
     audit: process.env.AGENT_GUARDRAILS_NO_AUDIT !== "1",
   });

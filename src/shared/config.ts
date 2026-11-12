@@ -12,7 +12,7 @@ export const CONFIG_FILE = "agent-guardrails.config.json";
 export const POLICIES = ["ask", "blocklist", "allowlist"] as const;
 export type Policy = (typeof POLICIES)[number];
 
-export const PRESETS = ["learner", "balanced", "team"] as const;
+export const PRESETS = ["learner", "balanced", "team", "light"] as const;
 export type Preset = (typeof PRESETS)[number];
 
 export const STACKS = ["generic", "node-ts", "python", "go", "db-heavy"] as const;
@@ -51,7 +51,7 @@ export const configSchema = z.object({
     .default([]),
   /** Read-only git subcommands agents may run. */
   gitAllow: z.array(z.string().trim().min(1)).default(["status", "diff", "log", "show"]),
-  /** Block file writes until the human has approved the plan (see `agent-guardrails approve`). */
+  /** Block file writes until the human has approved the plan (see `agent-guardrails-kit approve`). */
   approvalGate: z.boolean().default(true),
   /** Plan file the agent writes and the human approves. */
   planFile: z.string().trim().min(1).default("PLAN.md"),
@@ -62,7 +62,7 @@ export const configSchema = z.object({
    * Hard blocks still block. Without a valid `watchUntil` in the future the guard enforces, so watch mode always ends.
    */
   mode: z.enum(MODES).default("enforce"),
-  /** When watch mode ends: an ISO date-time, or null. Set by `agent-guardrails mode watch`. */
+  /** When watch mode ends: an ISO date-time, or null. Set by `agent-guardrails-kit mode watch`. */
   watchUntil: z
     .string()
     .refine((value) => !Number.isNaN(Date.parse(value)), { message: "must be a date and time such as 2026-11-14T09:00:00.000Z" })
@@ -70,7 +70,7 @@ export const configSchema = z.object({
     .default(null),
   /**
    * Before an agent's file write is allowed, save the file's old content under .agent-guardrails/checkpoints/ so
-   * `agent-guardrails restore` can put it back. Size limits apply and nothing is ever deleted.
+   * `agent-guardrails-kit restore` can put it back. Size limits apply and nothing is ever deleted.
    */
   checkpoints: z.boolean().default(true),
 
@@ -85,7 +85,7 @@ export const configSchema = z.object({
   github: z.boolean().default(true),
   /**
    * The team preset this project follows: "./file.json" in the project, or the name of an installed package.
-   * Set by `agent-guardrails preset use`; `update` applies it again.
+   * Set by `agent-guardrails-kit preset use`; `update` applies it again.
    */
   extends: z.string().optional(),
   /** Fingerprint of the preset settings when they were applied, so `doctor` can see that the source changed. */

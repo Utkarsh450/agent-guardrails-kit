@@ -150,7 +150,7 @@ describe("the installed guard, run as a process", () => {
     const { root, guard } = await installGuard();
     const started = Date.now();
     for (let k = 0; k < 5; k += 1) run(guard, "claude", { tool_name: "Bash", tool_input: { command: "ls" }, cwd: root });
-    expect((Date.now() - started) / 5).toBeLessThan(500);
+    expect((Date.now() - started) / 5).toBeLessThan(process.platform === "win32" ? 3000 : 500);
   });
 });
 

@@ -170,7 +170,8 @@ describe("update and a team preset", () => {
     const ui = quiet();
     expect(await runUpdate({ cwd: root, ui }, { yes: true })).toBe(0);
     const saved = await config(root);
-    expect(saved.allowCommands).toEqual(["pnpm test", "pnpm lint"]);
+    // The project's own stack commands stay, and the preset's are added to them.
+    expect(saved.allowCommands).toEqual(expect.arrayContaining(["pnpm test", "pnpm lint"]));
     expect(saved.policy).toBe("allowlist");
     expect(saved.extendsHash).not.toBe(first);
     expect(ui.text).toMatch(/Following the team preset "acme" \(\.\/team\.json\)/);

@@ -35,7 +35,7 @@ const line = (label: string, results: readonly CaseResult[]) => {
   return `  ${label}: ${s.passed}/${s.total} passed`;
 };
 
-/** `agent-guardrails test`: proves the guard blocks what it should, or prints a prompt to test an agent for real. */
+/** `agent-guardrails-kit test`: proves the guard blocks what it should, or prints a prompt to test an agent for real. */
 export async function runTest(ctx: CommandContext, options: TestOptions = {}): Promise<number> {
   const { ui } = ctx;
   const root = findProjectRoot(ctx.cwd);
@@ -58,7 +58,7 @@ export async function runTest(ctx: CommandContext, options: TestOptions = {}): P
     return 0;
   }
 
-  ui.intro("agent-guardrails test");
+  ui.intro("agent-guardrails-kit test");
   const results: CaseResult[] = [];
 
   const inProcess = runCorpusInProcess();
@@ -72,7 +72,7 @@ export async function runTest(ctx: CommandContext, options: TestOptions = {}): P
     () => false,
   );
   if (!installed) {
-    ui.error(`${GUARD_INSTALL_PATH} is not installed, so the guard in this project could not be tested. Run \`agent-guardrails init\` first.`);
+    ui.error(`${GUARD_INSTALL_PATH} is not installed, so the guard in this project could not be tested. Run \`agent-guardrails-kit init\` first.`);
     const summary = summarize(results);
     if (summary.failed.length > 0) ui.print(formatFailures(summary, 15));
     return 1;
@@ -100,9 +100,9 @@ export async function runTest(ctx: CommandContext, options: TestOptions = {}): P
   if (summary.failed.length > 0) {
     ui.print("");
     ui.print(formatFailures(summary, 15));
-    ui.error("Some checks failed. If you changed the settings on purpose (for example allowed a command), a failure may be expected; otherwise run `agent-guardrails doctor`.");
+    ui.error("Some checks failed. If you changed the settings on purpose (for example allowed a command), a failure may be expected; otherwise run `agent-guardrails-kit doctor`.");
     return 1;
   }
-  ui.outro("Everything passed. This proves the guard's logic, not your agents: `agent-guardrails test --prompt` gives you a prompt to test an agent for real.");
+  ui.outro("Everything passed. This proves the guard's logic, not your agents: `agent-guardrails-kit test --prompt` gives you a prompt to test an agent for real.");
   return 0;
 }

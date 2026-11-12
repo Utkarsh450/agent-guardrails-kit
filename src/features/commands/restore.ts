@@ -12,13 +12,13 @@ export interface RestoreOptions {
 }
 
 /**
- * `agent-guardrails restore <id>`: puts back the files a checkpoint saved. It shows a diff first and asks. It never
+ * `agent-guardrails-kit restore <id>`: puts back the files a checkpoint saved. It shows a diff first and asks. It never
  * deletes: a file the agent created is only reported. Only a person should run this; the guard stops agents from running it.
  */
 export async function runRestore(ctx: CommandContext, id: string, options: RestoreOptions = {}): Promise<number> {
   const { ui } = ctx;
   const root = findProjectRoot(ctx.cwd);
-  if (!CHECKPOINT_ID.test(id)) throw new CliError(`"${cleanText(id, 40)}" is not a checkpoint id. List them with: agent-guardrails checkpoints`);
+  if (!CHECKPOINT_ID.test(id)) throw new CliError(`"${cleanText(id, 40)}" is not a checkpoint id. List them with: agent-guardrails-kit checkpoints`);
   const manifest = await readCheckpoint(root, id);
   if (manifest === null) throw new CliError(`No checkpoint ${id} was found (or its manifest is not valid).`);
 
@@ -29,7 +29,7 @@ export async function runRestore(ctx: CommandContext, id: string, options: Resto
     } catch {
       throw new CliError(`--file must be a path inside the project, such as src/app.ts (got "${cleanText(options.file, 60)}").`);
     }
-    if (!manifest.files.some((file) => file.path === only)) throw new CliError(`Checkpoint ${id} has no file "${only}". See: agent-guardrails checkpoints ${id}`);
+    if (!manifest.files.some((file) => file.path === only)) throw new CliError(`Checkpoint ${id} has no file "${only}". See: agent-guardrails-kit checkpoints ${id}`);
   }
 
   const plan = await planRestore(root, manifest, only);

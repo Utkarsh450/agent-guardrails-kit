@@ -181,7 +181,7 @@ export const APP_JS = `
     show(
       h("h1", null, "Overview"),
       h("p", { class: "muted" }, "Is this project protected, and what is only a request to the agent?"),
-      data.project.configured ? null : h("div", { class: "callout" }, h("b", null, "Not set up yet. "), "Run ", command("agent-guardrails init"), " in your project folder."),
+      data.project.configured ? null : h("div", { class: "callout" }, h("b", null, "Not set up yet. "), "Run ", command("agent-guardrails-kit init"), " in your project folder."),
       h("div", { class: "grid" },
         stat(counts.ok, "OK", "s-ok"), stat(counts.warn, "Warnings", "s-warn"), stat(counts.fail, "Problems", "s-fail"), stat(counts.info, "Notes", "s-info")),
       h("h2", null, "Protection by agent"),
@@ -213,7 +213,7 @@ export const APP_JS = `
     return h("div", { class: "card" },
       h("div", null, h("b", null, "Settings: "), s.preset + " preset, " + s.stack + " stack"),
       h("div", { class: "muted" }, "Unknown commands: " + (s.policy === "ask" ? "the guard asks you" : s.policy) + ". Plan approval: " + (s.approvalGate ? "required before files change" : "OFF") + ". Commands allowed without asking: " + s.allowedCommands + "."),
-      h("div", { class: "muted" }, "Change settings with ", command("agent-guardrails preset <name>"), " or ", command("agent-guardrails allow add \\"<command>\\"")));
+      h("div", { class: "muted" }, "Change settings with ", command("agent-guardrails-kit preset <name>"), " or ", command("agent-guardrails-kit allow add \\"<command>\\"")));
   }
 
   // ───────── Setup plan ─────────
@@ -225,7 +225,7 @@ export const APP_JS = `
       h("h1", null, "Setup plan"),
       h("p", { class: "muted" }, "What the tool would write, based on " + data.basedOn + ". Nothing here is applied from this page."),
       h("div", { class: "grid" }, stat(c.create, "To create", "s-info"), stat(c.update, "To update", "s-warn"), stat(c.unchanged, "Already fine", "s-ok"), stat(c.kept + c.conflict, "Yours / attention", c.conflict > 0 ? "s-fail" : "s-info")),
-      h("p", null, "To apply it, run ", command(data.basedOn.startsWith("your") ? "agent-guardrails update" : "agent-guardrails init")),
+      h("p", null, "To apply it, run ", command(data.basedOn.startsWith("your") ? "agent-guardrails-kit update" : "agent-guardrails-kit init")),
       groups.map(([key, title]) => {
         const rows = data.entries.filter((e) => e.group === key);
         if (rows.length === 0) return null;
@@ -319,7 +319,7 @@ export const APP_JS = `
     };
     show(
       h("h1", null, "Explain"),
-      h("p", { class: "muted" }, "Why the guard blocked or asked, in plain words. In a terminal: ", command("agent-guardrails explain <name>")),
+      h("p", { class: "muted" }, "Why the guard blocked or asked, in plain words. In a terminal: ", command("agent-guardrails-kit explain <name>")),
       h("div", { class: "two" },
         h("div", { class: "list" },
           h("h2", { style: "margin-top:0" }, "Blocked"), index.rules.filter((r) => r.kind === "blocked").map((r) => item(r.id, r.title)),
