@@ -1,6 +1,6 @@
 {
   "name": "agent-guardrails-kit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "One command to put safety rails around AI coding agents: shared rules, hooks that block dangerous actions, git hooks and GitHub files.",
   "keywords": [
     "ai",
