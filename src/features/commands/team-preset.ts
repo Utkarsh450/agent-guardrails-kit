@@ -21,14 +21,14 @@ async function load(ctx: CommandContext) {
   const root = findProjectRoot(ctx.cwd);
   const io = diskSyncIo(root);
   const saved = await loadSavedConfig(io);
-  if (saved === null) throw new CliError("No saved settings found. Run `agent-guardrails init` first.");
+  if (saved === null) throw new CliError("No saved settings found. Run `agent-guardrails-kit init` first.");
   return { root, io, saved };
 }
 
 const asCliError = (error: unknown): unknown => (error instanceof PresetError ? new CliError(error.message) : error);
 
 /**
- * `agent-guardrails preset export [file]`: writes this project's settings as a preset file others can use. It never
+ * `agent-guardrails-kit preset export [file]`: writes this project's settings as a preset file others can use. It never
  * overwrites a file that is different, and it refuses settings a preset cannot carry.
  */
 export async function runPresetExport(ctx: CommandContext, target: string | undefined, options: TeamPresetOptions = {}): Promise<number> {
@@ -71,17 +71,17 @@ export async function runPresetExport(ctx: CommandContext, target: string | unde
     if (!(await ui.confirm({ message: `Write ${rel}?`, initial: true }))) throw new CancelledError();
   }
   await applyPlan(root, [{ path: rel, content, generated: false, status: "create", existing: null, reason: null }]);
-  ui.success(`Wrote ${rel}. Share it by committing it, copying it, or publishing a package with it saved as ${PRESET_FILE}. Use it in another project with: agent-guardrails preset use <file or package>`);
+  ui.success(`Wrote ${rel}. Share it by committing it, copying it, or publishing a package with it saved as ${PRESET_FILE}. Use it in another project with: agent-guardrails-kit preset use <file or package>`);
   return 0;
 }
 
 /**
- * `agent-guardrails preset use <file or package>`: follows a team preset. The preset can only keep or raise
+ * `agent-guardrails-kit preset use <file or package>`: follows a team preset. The preset can only keep or raise
  * protection; the change is shown as a diff and needs a yes. `update` applies the preset again later.
  */
 export async function runPresetUse(ctx: CommandContext, source: string | undefined, options: TeamPresetOptions = {}): Promise<number> {
   const { ui } = ctx;
-  if (source === undefined) throw new CliError("Say where the preset is, for example: agent-guardrails preset use ./team-preset.json (or the name of an installed package).");
+  if (source === undefined) throw new CliError("Say where the preset is, for example: agent-guardrails-kit preset use ./team-preset.json (or the name of an installed package).");
   const { root, io, saved } = await load(ctx);
 
   let loaded;
@@ -121,6 +121,6 @@ export async function runPresetUse(ctx: CommandContext, source: string | undefin
     if (!(await ui.confirm({ message: `Follow the team preset "${cleanText(loaded.preset.name, 60)}"?`, initial: false }))) throw new CancelledError();
   }
   await applyPlan(root, [plan]);
-  ui.success(`Now following ${loaded.source}. \`agent-guardrails update\` applies it again whenever the preset changes; run it now so the generated agent files follow.`);
+  ui.success(`Now following ${loaded.source}. \`agent-guardrails-kit update\` applies it again whenever the preset changes; run it now so the generated agent files follow.`);
   return 0;
 }

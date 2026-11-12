@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// agent-guardrails:generated installed copy of the guard. Update it with `agent-guardrails update`; do not edit by hand.
+// agent-guardrails:generated installed copy of the guard. Update it with `agent-guardrails-kit update`; do not edit by hand.
 // agent-guardrails guard: a dependency-free PreToolUse hook for Claude Code, Cursor, Codex and Qoder.
 //
 // It reads one hook payload from stdin, decides allow / ask / deny, and answers in the format the
@@ -848,7 +848,7 @@ function gateWrite(info, ctx) {
   return mk(
     "deny",
     "no-approved-plan",
-    `No approved plan (${state.reason}). Write the plan to ${ctx.config.planFile}, then ask the user to review it and run \`agent-guardrails approve\`.`,
+    `No approved plan (${state.reason}). Write the plan to ${ctx.config.planFile}, then ask the user to review it and run \`agent-guardrails-kit approve\`.`,
   );
 }
 
@@ -1682,7 +1682,7 @@ function classifyCommand(cmd, ctx, state, depth) {
 
   const cliSub = guardrailsCliSubcommand(words);
   if (typeof cliSub === "string" && GUARDRAILS_MODIFYING.has(cliSub)) {
-    parts.push(mk("deny", "guardrails-cli", `agent-guardrails ${cliSub} changes the guardrails themselves or opens a local server (approval, allowed commands, settings, dashboard). Only you may run it; an agent may not approve its own plan.`));
+    parts.push(mk("deny", "guardrails-cli", `agent-guardrails-kit ${cliSub} changes the guardrails themselves or opens a local server (approval, allowed commands, settings, dashboard). Only you may run it; an agent may not approve its own plan.`));
     return worst(parts);
   }
 
@@ -2236,7 +2236,7 @@ function writeAudit(ctx, agent, request, result, watched = false) {
 
 // ───────────────────────────── checkpoints ─────────────────────────────
 // Before an agent's file write goes through, the old content of the file is copied to
-// .agent-guardrails/checkpoints/<id>/files/<path> with a manifest, so `agent-guardrails restore` can put it back.
+// .agent-guardrails/checkpoints/<id>/files/<path> with a manifest, so `agent-guardrails-kit restore` can put it back.
 // Taking a checkpoint never changes the guard's answer: any failure is swallowed. Nothing is ever deleted or rotated;
 // when a limit is reached the guard simply stops saving more.
 
@@ -2444,7 +2444,7 @@ async function main() {
     stdin: await readStdin(),
     argv: process.argv.slice(2),
     scriptDir: path.dirname(fileURLToPath(import.meta.url)),
-    // Set by `agent-guardrails test --hooks` so the self-test does not fill the audit log. An agent cannot
+    // Set by `agent-guardrails-kit test --hooks` so the self-test does not fill the audit log. An agent cannot
     // set this: the variable must be in the hook's own environment, not in the command being checked.
     audit: process.env.AGENT_GUARDRAILS_NO_AUDIT !== "1",
   });

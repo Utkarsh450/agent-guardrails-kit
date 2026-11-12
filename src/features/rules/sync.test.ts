@@ -106,7 +106,7 @@ describe("planSync (in memory)", () => {
   });
 
   it("fails clearly when there are no always rules", async () => {
-    await expect(planSync(memoryIo(), { agents: ["codex"] })).rejects.toThrow(/agent-guardrails init/);
+    await expect(planSync(memoryIo(), { agents: ["codex"] })).rejects.toThrow(/agent-guardrails-kit init/);
   });
 
   it("rejects a rule name used in both scopes", async () => {

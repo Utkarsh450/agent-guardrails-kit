@@ -37,7 +37,7 @@ describe("the documentation matches the program", () => {
 
   it("mentions every command in the README", () => {
     const readme = read("README.md");
-    for (const name of commandNames) expect(readme, name).toMatch(new RegExp(`agent-guardrails ${name}\\b`));
+    for (const name of commandNames) expect(readme, name).toMatch(new RegExp(`agent-guardrails-kit ${name}\\b`));
   });
 
   it("only links to files that exist", () => {
@@ -78,7 +78,7 @@ describe("the documentation matches the program", () => {
 describe("the package is ready to publish", () => {
   it("ships only the built CLI, under both command names, and is still protected from accidental publishing", () => {
     expect(pkg.files).toEqual(["dist/cli.mjs"]);
-    expect(pkg.bin).toEqual({ "agent-guardrails": "dist/cli.mjs", "agent-guardrails-kit": "dist/cli.mjs" });
+    expect(pkg.bin).toEqual({ "agent-guardrails-kit": "dist/cli.mjs" });
     expect(pkg.private).toBe(true);
     expect(pkg.version).toBe("0.0.0");
     expect(pkg.scripts.prepublishOnly).toBe("npm run typecheck && npm run test && npm run build");
@@ -131,7 +131,7 @@ describe("this repository's CI workflow", () => {
     const runs = (doc.jobs.package.steps as Array<{ run?: string }>).map((s) => s.run ?? "").join("\n");
     expect(runs).toContain("npm pack");
     expect(runs).toContain("npm install --no-audit --no-fund \"$RUNNER_TEMP\"/pack/*.tgz");
-    expect(runs).toContain("npx agent-guardrails init");
+    expect(runs).toContain("npx agent-guardrails-kit init");
   });
 
   it("is read-only, pins actions to commits, and keeps expressions out of shell lines", () => {

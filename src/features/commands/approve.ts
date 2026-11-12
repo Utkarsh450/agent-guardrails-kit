@@ -25,7 +25,7 @@ async function readText(file: string): Promise<string | null> {
 }
 
 /**
- * `agent-guardrails approve`: you read the plan the agent wrote, and approve it. Agents can then write files
+ * `agent-guardrails-kit approve`: you read the plan the agent wrote, and approve it. Agents can then write files
  * until the plan changes. Only a person should run this; the guard stops agents from editing the approval record.
  */
 export async function runApprove(ctx: CommandContext, options: ApproveOptions = {}): Promise<number> {

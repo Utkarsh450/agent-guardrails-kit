@@ -18,7 +18,7 @@ const readConfig = async (root: string) => JSON.parse(await readFile(path.join(r
 const mode = (root: string, ui: ScriptedUi, name?: string, options: { days?: number; yes?: boolean } = {}) =>
   runMode({ cwd: root, ui }, name, { ...options, now: NOW });
 
-describe("agent-guardrails mode", () => {
+describe("agent-guardrails-kit mode", () => {
   it("says the guard is enforcing when no mode is set", async () => {
     const ui = new ScriptedUi([], false);
     expect(await mode(await project(), ui)).toBe(0);

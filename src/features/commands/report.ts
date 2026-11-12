@@ -13,7 +13,7 @@ function shorten(text: string, max: number): string {
   return one.length > max ? `${one.slice(0, max - 1)}…` : one;
 }
 
-/** `agent-guardrails report`: what the agents tried, from the local audit log. Nothing here ever leaves your machine. */
+/** `agent-guardrails-kit report`: what the agents tried, from the local audit log. Nothing here ever leaves your machine. */
 export async function runReport(ctx: CommandContext, options: ReportOptions = {}): Promise<number> {
   const { ui } = ctx;
   const root = findProjectRoot(ctx.cwd);
@@ -54,7 +54,7 @@ export async function runReport(ctx: CommandContext, options: ReportOptions = {}
     }
   }
 
-  ui.print("\nTip: `agent-guardrails explain <reason>` says why something was blocked and what to do.");
+  ui.print("\nTip: `agent-guardrails-kit explain <reason>` says why something was blocked and what to do.");
   if (skipped > 0) ui.warn(`${skipped} line(s) of the log could not be read and were skipped.`);
   if (size > AUDIT_MAX_BYTES * 0.8) ui.warn(`The log is ${Math.round(size / 1024 / 1024)} MB; the guard stops writing at ${AUDIT_MAX_BYTES / 1024 / 1024} MB. Move the file somewhere else by hand.`);
   return 0;

@@ -6,7 +6,7 @@ import { runCheckpoints } from "./checkpoints.ts";
 
 const ESC = String.fromCharCode(27);
 
-describe("agent-guardrails checkpoints", () => {
+describe("agent-guardrails-kit checkpoints", () => {
   it("says so when nothing has been saved", async () => {
     const ui = new ScriptedUi([], false);
     expect(await runCheckpoints({ cwd: await tempProject(), ui })).toBe(0);
@@ -55,7 +55,7 @@ describe("agent-guardrails checkpoints", () => {
     expect(ui.text).toContain("a.ts: saved, 1 KB");
     expect(ui.text).toContain("new.ts: did not exist (the agent created it)");
     expect(ui.text).toContain("big.bin: not saved: it is bigger than the 1 MB limit");
-    expect(ui.text).toContain(`agent-guardrails restore ${ID_A}`);
+    expect(ui.text).toContain(`agent-guardrails-kit restore ${ID_A}`);
   });
 
   it("refuses an id that is not an id, and one that is not there", async () => {

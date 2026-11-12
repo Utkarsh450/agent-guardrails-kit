@@ -98,7 +98,7 @@ export async function loadRules(io: SyncIo, rulesDir: string): Promise<Rule[]> {
 
   if (always.length === 0) {
     throw new RuleError(
-      `No rules found in ${rulesDir}/always/. Run \`agent-guardrails init\` first, or add a rule file there.`,
+      `No rules found in ${rulesDir}/always/. Run \`agent-guardrails-kit init\` first, or add a rule file there.`,
     );
   }
 

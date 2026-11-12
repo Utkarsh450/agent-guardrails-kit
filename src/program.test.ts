@@ -6,7 +6,7 @@ import { CancelledError, CliError } from "./features/commands/errors.ts";
 describe("buildProgram", () => {
   it("has the expected name and a version", () => {
     const program = buildProgram();
-    expect(program.name()).toBe("agent-guardrails");
+    expect(program.name()).toBe("agent-guardrails-kit");
     expect(program.version()).toMatch(/^\d+\.\d+\.\d+/);
   });
 
@@ -33,7 +33,8 @@ describe("buildProgram", () => {
       // commander exits after printing help
     }
     expect(help.startsWith(`${pkg.name} v${pkg.version}\n`)).toBe(true);
-    expect(Object.keys(pkg.bin).sort()).toEqual(["agent-guardrails", "agent-guardrails-kit"]);
+    // One command name only: the bare "agent-guardrails" belongs to a different npm package.
+    expect(Object.keys(pkg.bin)).toEqual(["agent-guardrails-kit"]);
     expect(new Set(Object.values(pkg.bin)).size).toBe(1);
   });
 

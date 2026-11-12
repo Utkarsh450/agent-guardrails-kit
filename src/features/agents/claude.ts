@@ -24,7 +24,7 @@ export async function planClaude(read: ReadExisting): Promise<AgentPlan> {
     enforcement: "enforced",
     files: [file],
     notes: [
-      "Claude Code reloads hooks from .claude/settings.json on its own. Run /status to confirm the project settings loaded.",
+      "Start a NEW Claude Code session in this folder now. Claude Code reads hooks when a session starts, so a session that was already open may not use them. Then check once: ask Claude to create a file; it should stop at the plan gate. `agent-guardrails-kit test --prompt` is the full check.",
       "Node must be on PATH for the guard. If it is not, every action is blocked (the hook fails closed) until it is.",
       "Commit .claude/settings.json and .agent-guardrails/guard.mjs so teammates get the same protection.",
     ],

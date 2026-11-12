@@ -198,12 +198,12 @@ describe("what the page actually shows (the real script, run against a fake DOM)
 
   const tabs: Array<[string, string[]]> = [
     ["#overview", ["Overview", "Protection by agent", "Claude Code", "Enforced", "Advisory only", "balanced preset"]],
-    ["#plan", ["Setup plan", "Already fine", "agent-rules/always/safety.md", "agent-guardrails update"]],
+    ["#plan", ["Setup plan", "Already fine", "agent-rules/always/safety.md", "agent-guardrails-kit update"]],
     ["#activity", ["Activity", "Most common reasons", "Deleting files", "rm -rf dist", "Unknown command"]],
     ["#prompts", ["Test prompts", "Guardrail test", "Gap review", "Copy prompt"]],
     ["#explain", ["Explain", "Changing git", "Asks you first", "Topics"]],
     ["#explain:git-write", ["git-write: Changing git", "Why:", "What to do:"]],
-    ["#explain:no-approved-plan", ["No approved plan", "agent-guardrails approve"]],
+    ["#explain:no-approved-plan", ["No approved plan", "agent-guardrails-kit approve"]],
   ];
 
   it.each(tabs)("%s shows real content and never prints null, undefined or [object ...]", async (hash, expected) => {
@@ -223,7 +223,7 @@ describe("what the page actually shows (the real script, run against a fake DOM)
     };
     const page = await renderDashboard(APP_JS, "#overview", emptyHandler);
     expect(page.screen()).toContain("Not set up yet.");
-    expect(page.screen()).toContain("agent-guardrails init");
+    expect(page.screen()).toContain("agent-guardrails-kit init");
     expect(page.screen()).not.toContain("null");
     await empty.app.close();
   });

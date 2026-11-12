@@ -89,13 +89,13 @@ describe("watch mode in the guard", () => {
   });
 
   it("stops agents from running the mode command", () => {
-    expect(shell("agent-guardrails mode watch --days 7")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
+    expect(shell("agent-guardrails-kit mode watch --days 7")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
     expect(shell("npx agent-guardrails-kit mode enforce")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
-    expect(shell("agent-guardrails alerts --notify")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
-    expect(shell("agent-guardrails restore 20261107T101000000Z-aaaa --yes")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
-    expect(shell("agent-guardrails checkpoints").decision).not.toBe("deny");
-    expect(shell("agent-guardrails preset use ./team.json --yes")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
-    expect(shell("agent-guardrails preset export team.json --yes")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
+    expect(shell("agent-guardrails-kit alerts --notify")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
+    expect(shell("agent-guardrails-kit restore 20261107T101000000Z-aaaa --yes")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
+    expect(shell("agent-guardrails-kit checkpoints").decision).not.toBe("deny");
+    expect(shell("agent-guardrails-kit preset use ./team.json --yes")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
+    expect(shell("agent-guardrails-kit preset export team.json --yes")).toMatchObject({ decision: "deny", rule: "guardrails-cli" });
   });
 });
 

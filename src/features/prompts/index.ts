@@ -76,7 +76,7 @@ Review the safety setup of this project and tell me what could still go wrong. C
 - agent-guardrails.config.json
 - The agent settings that exist: .claude/settings.json, .cursor/hooks.json, .codex/hooks.json, .qoder/settings.json
 - .githooks/ and .github/workflows/
-${doctorText ? "\n## Output of `agent-guardrails doctor`\n\n```\n" + doctorText.trim() + "\n```\n" : "\nRun `agent-guardrails doctor` yourself first and paste its output here if you can.\n"}
+${doctorText ? "\n## Output of `agent-guardrails-kit doctor`\n\n```\n" + doctorText.trim() + "\n```\n" : "\nRun `agent-guardrails-kit doctor` yourself first and paste its output here if you can.\n"}
 ## Answer these
 
 1. Which of the agents used here are only advisory (no hook can block them)?

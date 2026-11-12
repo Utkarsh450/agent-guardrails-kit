@@ -155,7 +155,7 @@ export async function buildSetupPlan({ options, io, hooksPathSet, createMissingR
       lines: [
         "Optional: protect your main branch on GitHub (no force pushes, required checks and review). You run this yourself, once. Replace OWNER, REPO and the branch:",
         `  ${branchProtectionCommand({ owner: "OWNER", repo: "REPO", branch: "main" }).split("\n")[0]} ...`,
-        "(`agent-guardrails explain branch-protection` prints the full command.) Also edit .github/CODEOWNERS and put your username in it.",
+        "(`agent-guardrails-kit explain branch-protection` prints the full command.) Also edit .github/CODEOWNERS and put your username in it.",
       ],
     });
   }

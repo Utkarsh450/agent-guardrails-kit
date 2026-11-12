@@ -253,7 +253,7 @@ describe("refusing bad places", () => {
 describe("update", () => {
   it("needs saved settings", async () => {
     const root = await project();
-    await expect(runUpdate({ cwd: root, ui: new ScriptedUi([], false) }, { yes: true })).rejects.toThrow(/Run `agent-guardrails init` first/);
+    await expect(runUpdate({ cwd: root, ui: new ScriptedUi([], false) }, { yes: true })).rejects.toThrow(/Run `agent-guardrails-kit init` first/);
   });
 
   it("says everything is up to date right after init", async () => {

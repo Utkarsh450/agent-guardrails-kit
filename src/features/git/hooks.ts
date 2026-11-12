@@ -23,7 +23,7 @@ export type HookName = "pre-commit" | "pre-push";
  */
 export function hookScript(name: HookName): string {
   return `#!/bin/sh
-# agent-guardrails:generated ${name} hook. Update it with \`agent-guardrails update\`; do not edit by hand.
+# agent-guardrails:generated ${name} hook. Update it with \`agent-guardrails-kit update\`; do not edit by hand.
 # Runs ${GIT_CHECKS_PATH}. If Node or that file is missing, git blocks the ${name === "pre-commit" ? "commit" : "push"}.
 root="$(git rev-parse --show-toplevel)" || exit 1
 exec node "$root/${GIT_CHECKS_PATH}" ${name} "$@"

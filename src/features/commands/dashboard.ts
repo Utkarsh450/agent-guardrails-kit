@@ -38,14 +38,14 @@ export function openInBrowser(url: string): void {
   }
 }
 
-/** `agent-guardrails ui`: a read-only dashboard on 127.0.0.1. Stop it with Ctrl+C. */
+/** `agent-guardrails-kit ui`: a read-only dashboard on 127.0.0.1. Stop it with Ctrl+C. */
 export async function runDashboard(ctx: CommandContext, options: DashboardCommandOptions = {}, hooks: DashboardHooks = {}): Promise<number> {
   const { ui } = ctx;
   const root = findProjectRoot(ctx.cwd);
   const port = options.port ?? DEFAULT_PORT;
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new CliError(`"${String(options.port)}" is not a valid port. Use a number from 0 to 65535 (0 picks a free port).`);
 
-  ui.intro("agent-guardrails ui", { big: true });
+  ui.intro("agent-guardrails-kit ui", { big: true });
   let server: RunningDashboard;
   try {
     server = await startDashboard({ root, port });

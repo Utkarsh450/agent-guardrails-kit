@@ -21,7 +21,7 @@ export interface PresetOptions {
 }
 
 /**
- * `agent-guardrails preset <name>`: switches the guard settings to a preset. Unlike `init`, this REPLACES policy,
+ * `agent-guardrails-kit preset <name>`: switches the guard settings to a preset. Unlike `init`, this REPLACES policy,
  * allowCommands, gitAllow, approvalGate and auditAllowed, so it shows the change and asks first.
  */
 export async function runPreset(ctx: CommandContext, name: string, options: PresetOptions = {}): Promise<number> {
@@ -33,7 +33,7 @@ export async function runPreset(ctx: CommandContext, name: string, options: Pres
   const root = findProjectRoot(ctx.cwd);
   const io = diskSyncIo(root);
   const saved = await loadSavedConfig(io);
-  if (saved === null) throw new CliError("No saved settings found. Run `agent-guardrails init` first.");
+  if (saved === null) throw new CliError("No saved settings found. Run `agent-guardrails-kit init` first.");
 
   const preset = parsePreset(name);
   const stack = options.stack ? parseStack(options.stack) : saved.stack;
@@ -70,7 +70,7 @@ export async function runPreset(ctx: CommandContext, name: string, options: Pres
     if (!(await ui.confirm({ message: `Switch to the ${preset} preset?`, initial: false }))) throw new CancelledError();
   }
   await applyPlan(root, [plan]);
-  if (saved.extends !== undefined) ui.info(`This project no longer follows the team preset ${saved.extends}; run \`agent-guardrails preset use ${saved.extends}\` to follow it again.`);
-  ui.success(`Switched to ${preset}. Run \`agent-guardrails update\` so the generated agent files follow (the learner preset repeats rules per agent).`);
+  if (saved.extends !== undefined) ui.info(`This project no longer follows the team preset ${saved.extends}; run \`agent-guardrails-kit preset use ${saved.extends}\` to follow it again.`);
+  ui.success(`Switched to ${preset}. Run \`agent-guardrails-kit update\` so the generated agent files follow (the learner preset repeats rules per agent).`);
   return 0;
 }

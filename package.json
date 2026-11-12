@@ -18,12 +18,19 @@
   "type": "module",
   "private": true,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Utkarsh450/agent-guardrails-kit.git"
+  },
+  "homepage": "https://github.com/Utkarsh450/agent-guardrails-kit#readme",
+  "bugs": {
+    "url": "https://github.com/Utkarsh450/agent-guardrails-kit/issues"
+  },
   "packageManager": "pnpm@11.24.0",
   "engines": {
     "node": ">=22.12.0"
   },
   "bin": {
-    "agent-guardrails": "dist/cli.mjs",
     "agent-guardrails-kit": "dist/cli.mjs"
   },
   "files": [

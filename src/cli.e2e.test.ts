@@ -59,8 +59,8 @@ describe("basics", () => {
     const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8")) as { name: string; version: string };
     expect(run(os.tmpdir(), ["--help"]).out.startsWith(`${pkg.name} v${pkg.version}\n`)).toBe(true);
     const dir = await project();
-    expect(run(dir, ["init", "--agents", "claude", "--dry-run"]).out.startsWith(`${pkg.name} v${pkg.version} · agent-guardrails init\n`)).toBe(true);
-    expect(run(dir, ["doctor"]).out).toContain(`${pkg.name} v${pkg.version} · agent-guardrails doctor`);
+    expect(run(dir, ["init", "--agents", "claude", "--dry-run"]).out.startsWith(`${pkg.name} v${pkg.version} · agent-guardrails-kit init\n`)).toBe(true);
+    expect(run(dir, ["doctor"]).out).toContain(`${pkg.name} v${pkg.version} · agent-guardrails-kit doctor`);
   });
 
   it("rejects an unknown command with a helpful message and a non-zero exit code", () => {
@@ -163,7 +163,7 @@ describe("doctor", () => {
     const result = run(dir, ["doctor"]);
     expect(result.code).toBe(1);
     expect(result.out).toContain("[FAIL] Claude Code: guard hook");
-    expect(result.out).toContain("fix: agent-guardrails init");
+    expect(result.out).toContain("fix: agent-guardrails-kit init");
   });
 
   it("prints JSON when asked, and fails in an empty folder", async () => {
@@ -194,15 +194,15 @@ describe("agents cannot use the CLI to widen their own permissions", () => {
     const command = settings.hooks.PreToolUse[0].hooks[0].command as string;
     const hook = (cmd: string) =>
       spawnSync(posixShell(), ["-c", command], { cwd: dir, encoding: "utf8", env: { ...env, CLAUDE_PROJECT_DIR: dir }, input: JSON.stringify({ tool_name: "Bash", tool_input: { command: cmd }, cwd: dir }) });
-    for (const cmd of ["agent-guardrails approve --yes", "npx agent-guardrails-kit approve -y", "pnpm dlx agent-guardrails-kit allow add node", "agent-guardrails --cwd . init --yes"]) {
+    for (const cmd of ["agent-guardrails-kit approve --yes", "npx agent-guardrails-kit approve -y", "pnpm dlx agent-guardrails-kit allow add node", "agent-guardrails --cwd . init --yes"]) {
       const out = hook(cmd);
       expect(out.status, cmd).toBe(2);
       expect(out.stderr, cmd).toContain("guardrails-cli");
     }
     // Even a project that allow-lists the whole program cannot let an agent approve its own plan.
     await writeFile(path.join(dir, "agent-guardrails.config.json"), JSON.stringify({ allowCommands: ["agent-guardrails"], agents: ["claude"] }), "utf8");
-    expect(hook("agent-guardrails approve --yes").status).toBe(2);
-    expect(hook("agent-guardrails doctor").status).toBe(0);
+    expect(hook("agent-guardrails-kit approve --yes").status).toBe(2);
+    expect(hook("agent-guardrails-kit doctor").status).toBe(0);
   });
 });
 
@@ -241,7 +241,8 @@ describe("approve", () => {
 
 describe("allow", () => {
   it("adds, lists and removes commands, refusing the ones that can never be allowed", async () => {
-    const dir = await initialised("claude");
+    // learner starts with an empty allow list; balanced now allows the stack's test and build commands.
+    const dir = await initialised("claude", ["--preset", "learner"]);
     expect(run(dir, ["allow", "list"]).out).toContain("No commands are allowed");
 
     const add = run(dir, ["allow", "add", "pnpm test", "--yes"]);

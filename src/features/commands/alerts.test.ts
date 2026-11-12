@@ -37,7 +37,7 @@ function notifier() {
   return { calls, runProgram };
 }
 
-describe("agent-guardrails alerts", () => {
+describe("agent-guardrails-kit alerts", () => {
   it("prints new blocked, asked and watched actions, and not old or allowed ones", async () => {
     const ui = new ScriptedUi([], false);
     const log = new FakeLog(entryLine({ detail: "old command" }));
@@ -100,7 +100,7 @@ describe("agent-guardrails alerts", () => {
   });
 });
 
-describe("agent-guardrails alerts --notify", () => {
+describe("agent-guardrails-kit alerts --notify", () => {
   it("sends one notification per burst, for blocks and asks only", async () => {
     const ui = new ScriptedUi([], false);
     const log = new FakeLog("");

@@ -63,7 +63,7 @@ export function buildProgram(deps: ProgramDeps = defaultDeps()): Command {
   const program = new Command();
 
   program
-    .name("agent-guardrails")
+    .name("agent-guardrails-kit")
     .description("Set up safe, shared rules, hooks and git guardrails for AI coding agents (Claude Code, Cursor, Codex, Antigravity, Qoder).")
     .version(pkg.version, "-v, --version", "print the version")
     .option("--cwd <folder>", "work on this project folder instead of the current one")
@@ -75,10 +75,10 @@ export function buildProgram(deps: ProgramDeps = defaultDeps()): Command {
       "after",
       `
 Quick start
-  agent-guardrails init            choose your agents and set everything up (asks before writing)
-  agent-guardrails doctor          check what works and what does not
-  agent-guardrails test --hooks    prove the guard blocks what it should
-  agent-guardrails explain         why was something blocked?
+  agent-guardrails-kit init            choose your agents and set everything up (asks before writing)
+  agent-guardrails-kit doctor          check what works and what does not
+  agent-guardrails-kit test --hooks    prove the guard blocks what it should
+  agent-guardrails-kit explain         why was something blocked?
 
 Nothing is created or changed without showing you the plan first, and nothing is ever deleted.`,
     );
@@ -99,7 +99,7 @@ Nothing is created or changed without showing you the plan first, and nothing is
 
   command("init", "Set up guardrails in this project: rules, hooks, git checks and GitHub files")
     .option("--agents <list>", 'agents to set up: claude, cursor, codex, antigravity, qoder (comma separated) or "all"')
-    .option("--preset <name>", "learner, balanced (default) or team")
+    .option("--preset <name>", "learner, balanced (default), team or light")
     .option("--stack <name>", "generic, node-ts, python, go or db-heavy (detected if omitted)")
     .option("--no-github", "do not add GitHub templates, CODEOWNERS or the CI workflow")
     .option("-y, --yes", "apply the plan without asking (nothing is ever written without --yes or an answer)")
@@ -163,7 +163,7 @@ Nothing is created or changed without showing you the plan first, and nothing is
     .option("-y, --yes", "remove without asking")
     .action(async (pattern: string, options) => run((ctx) => runAllowRemove(ctx, pattern, options))());
 
-  command("preset <name> [target]", "Switch the guard settings to a preset: learner, balanced or team. Or share one: 'export [file]' and 'use <file or package>'")
+  command("preset <name> [target]", "Switch the guard settings to a preset: learner, balanced, team or light. Or share one: 'export [file]' and 'use <file or package>'")
     .option("--stack <name>", "also change the project kind")
     .option("--name <text>", "name written into an exported preset")
     .option("--description <text>", "description written into an exported preset")

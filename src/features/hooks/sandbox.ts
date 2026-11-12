@@ -9,7 +9,7 @@ import {
 
 /**
  * An in-memory project the guard can be evaluated against without touching the real disk.
- * Used by the unit tests and by the in-process self-test (`agent-guardrails test --hooks`).
+ * Used by the unit tests and by the in-process self-test (`agent-guardrails-kit test --hooks`).
  */
 
 export const SANDBOX_ROOT = "/proj";
