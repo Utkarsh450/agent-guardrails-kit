@@ -6,6 +6,12 @@ It sets up shared rules every agent reads, hooks that block dangerous actions, g
 
 > **Status: pre-release.** This lowers risk. It does not remove it. Read [what it cannot do](docs/LIMITS.md) before you rely on it.
 
+## See it in 52 seconds
+
+[![The guard blocking rm -rf, a force push, reading .env, DROP TABLE, npm publish and curl piped to sh](docs/media/demo-poster.jpg)](docs/media/agent-guardrails-kit-demo.mp4)
+
+[Watch the demo video](docs/media/agent-guardrails-kit-demo.mp4) (52 s, sound on). Every terminal line in it is real output of `agent-guardrails-kit` v0.1.1.
+
 ## Quick start
 
 You need Node 22.12 or newer and git.
